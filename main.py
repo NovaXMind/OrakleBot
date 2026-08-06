@@ -201,70 +201,69 @@ def get_latest_market_news():
     return "\n- ".join(news_titles)
 
 # ==========================================
-# 🌐 دریافت داده‌های زنده (اصلاح شده)
+# 🌐 دریافت داده‌های زنده (با بایننس + KuCoin پشتیبان)
 # ==========================================
 def get_live_prices_and_fng():
     prices = {}
     fng_data = {'value': '50', 'classification': 'Neutral'}
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
     }
 
-    crypto_symbols = {
-        'BTC': ('BTCUSDT', 'bitcoin'),
-        'ETH': ('ETHUSDT', 'ethereum'),
-        'SOL': ('SOLUSDT', 'solana'),
-        'BNB': ('BNBUSDT', 'binancecoin'),
-        'XRP': ('XRPUSDT', 'ripple'),
-        'ADA': ('ADAUSDT', 'cardano'),
-        'DOGE': ('DOGEUSDT', 'dogecoin'),
-        'AVAX': ('AVAXUSDT', 'avalanche-2'),
-        'LINK': ('LINKUSDT', 'chainlink'),
-        'USDT': ('USDT', 'tether')
+    # لیست نمادها (کلید: [نماد بایننس, نماد کوکوین])
+    crypto_map = {
+        'BTC': ('BTCUSDT', 'BTC-USDT'),
+        'ETH': ('ETHUSDT', 'ETH-USDT'),
+        'SOL': ('SOLUSDT', 'SOL-USDT'),
+        'BNB': ('BNBUSDT', 'BNB-USDT'),
+        'XRP': ('XRPUSDT', 'XRP-USDT'),
+        'ADA': ('ADAUSDT', 'ADA-USDT'),
+        'DOGE': ('DOGEUSDT', 'DOGE-USDT'),
+        'AVAX': ('AVAXUSDT', 'AVAX-USDT'),
+        'LINK': ('LINKUSDT', 'LINK-USDT'),
+        'USDT': ('USDT', 'USDT')
     }
 
-    # 1️⃣ اولویت اول: دریافت مستقیم کریپتو از بایننس
-    for key, (bn_sym, _) in crypto_symbols.items():
-        if key == 'USDT':
-            prices['USDT'] = "$1.00"
-            continue
-            
+    prices['USDT'] = "$1.00"
+
+    # 1️⃣ اولویت اول: تلاش مستقیم از بایننس (با اندپوینت‌های چندگانه)
+    binance_endpoints = [
+        "https://api.binance.com/api/v3/ticker/price",
+        "https://api1.binance.com/api/v3/ticker/price",
+        "https://api3.binance.com/api/v3/ticker/price"
+    ]
+
+    for endpoint in binance_endpoints:
+        if len(prices) >= 10:
+            break
         try:
-            bn_url = f"https://api.binance.com/api/v3/ticker/price?symbol={bn_sym}"
-            res = requests.get(bn_url, headers=headers, timeout=5)
+            res = requests.get(endpoint, headers=headers, timeout=4)
             if res.status_code == 200:
-                val = float(res.json().get('price', 0))
-                if val > 0:
-                    if key in ['XRP', 'ADA', 'DOGE']:
-                        prices[key] = f"${val:.4f}"
-                    else:
-                        prices[key] = f"${val:,.2f}"
-        except Exception as e:
-            print(f"خطا در بایننس برای {key}: {e}")
+                data = {item['symbol']: float(item['price']) for item in res.json()}
+                for key, (bn_sym, _) in crypto_map.items():
+                    if key not in prices and bn_sym in data:
+                        val = data[bn_sym]
+                        prices[key] = f"${val:.4f}" if key in ['XRP', 'ADA', 'DOGE'] else f"${val:,.2f}"
+        except Exception:
+            continue
 
-    # 2️⃣ پشتیبان کریپتو: اگر بایننس جواب نداد، CoinGecko چک می‌شود
-    missing_cryptos = [k for k in crypto_symbols.keys() if k not in prices]
-    if missing_cryptos:
+    # 2️⃣ اولویت دوم (پشتیبان): اگر بایننس مسدود بود -> دریافت از KuCoin
+    missing_keys = [k for k in crypto_map.keys() if k not in prices]
+    if missing_keys:
         try:
-            cg_ids = ",".join([crypto_symbols[k][1] for k in missing_cryptos if k != 'USDT'])
-            if cg_ids:
-                url = f"https://api.coingecko.com/api/v3/simple/price?ids={cg_ids}&vs_currencies=usd"
-                res = requests.get(url, headers=headers, timeout=6)
-                if res.status_code == 200:
-                    data = res.json()
-                    for key in missing_cryptos:
-                        cg_id = crypto_symbols[key][1]
-                        val = data.get(cg_id, {}).get('usd')
-                        if val is not None:
-                            if key in ['XRP', 'ADA', 'DOGE']:
-                                prices[key] = f"${val:.4f}"
-                            else:
-                                prices[key] = f"${val:,.2f}"
+            kc_res = requests.get("https://api.kucoin.com/api/v1/market/allTickers", headers=headers, timeout=5)
+            if kc_res.status_code == 200:
+                kc_data = {item['symbol']: float(item['last']) for item in kc_res.json().get('data', {}).get('ticker', []) if item.get('last')}
+                for key in missing_keys:
+                    kc_sym = crypto_map[key][1]
+                    if kc_sym in kc_data:
+                        val = kc_data[kc_sym]
+                        prices[key] = f"${val:.4f}" if key in ['XRP', 'ADA', 'DOGE'] else f"${val:,.2f}"
         except Exception:
             pass
 
-    # 3️⃣ مقدار پیش‌فرض برای کریپتو در صورت قطع کامل
-    for key in crypto_symbols.keys():
+    # مقادیر رزرو در صورت قطعی شبکه
+    for key in crypto_map.keys():
         if key not in prices:
             prices[key] = "N/A"
 
@@ -281,7 +280,7 @@ def get_live_prices_and_fng():
         pass
 
     # ------------------------------------
-    # دریافت کمودیتی‌ها و شاخص‌های بورس (Yahoo Finance با سیستم Header جدید)
+    # دریافت کمودیتی‌ها و شاخص‌های بورس (Yahoo Finance)
     # ------------------------------------
     symbols = {
         'XAUUSD': 'GC=F', 'XAGUSD': 'SI=F', 'WTI': 'CL=F', 'BRENT': 'BZ=F',
@@ -304,10 +303,7 @@ def get_live_prices_and_fng():
                 result = data.get('chart', {}).get('result')
                 if result:
                     price = result[0]['meta'].get('regularMarketPrice')
-                    if price is not None:
-                        prices[key] = f"${price:,.2f}"
-                    else:
-                        prices[key] = "N/A"
+                    prices[key] = f"${price:,.2f}" if price is not None else "N/A"
                 else:
                     prices[key] = "N/A"
             else:
