@@ -315,9 +315,11 @@ def telegram_listener():
 def generate_price_dashboard_text():
     date_header = get_formatted_dates()
     prices, _ = get_live_prices_and_fng()
-    return f"""{date_header}
+    return f"""💎 **ORAKLE MARKET | داشبورد زنده قیمت‌ها**
 
-💎 **ORAKLE MARKET | داشبورد زنده قیمت‌ها**
+
+{date_header}
+
 ─── ⋆ 💎 ⋆ ───
 
 
@@ -414,9 +416,11 @@ def job_post_2(send_to_channel=True):
     STRICT FORMATTING RULE: ALL main headings, sub-headings, and titles MUST BE BOLD (wrapped in double asterisks like **Heading**). Do not remove bold formatting from titles!
     
     Format:
+    😱📊 **ORAKLE MARKET | تحلیل شاخص ترس و طمع**
+
+
     {date_header}
 
-    😱📊 **ORAKLE MARKET | تحلیل شاخص ترس و طمع**
     ─── ⋆ 💎 ⋆ ───
 
     📌 **وضعیت کنونی شاخص:**
@@ -464,9 +468,11 @@ def job_post_3(send_to_channel=True):
     STRICT FORMATTING RULE: ALL main headings, titles, and sub-headings MUST BE BOLD (wrapped in double asterisks like **Title**). Never output plain text headings without double asterisks.
 
     Format:
+    🔮 **ORAKLE MARKET | بولتن تحلیلی تخصصی**
+
+
     {date_header}
 
-    🔮 **ORAKLE MARKET | بولتن تحلیلی تخصصی**
     ─── ⋆ 💎 ⋆ ───
 
     🌐 **تحلیل جامع کلان و ژئوپلیتیک**
@@ -546,7 +552,6 @@ if __name__ == "__main__":
     print("   - ارسال قیمت‌ها به تمام کاربران ربات: هر ۳۰ دقیقه")
     print("   - ارسال کل پست‌ها به کانال عمومی: روزی یک بار ساعت ۰۸:۰۰ صبح")
     
-    # ارسال تست اولیه به کاربران
     send_price_to_all_bot_users()
 
     while True:
