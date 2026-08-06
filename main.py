@@ -302,8 +302,34 @@ def telegram_listener():
                     if chat_id and text:
                         save_user(chat_id)
                         if text == "/start":
-                            welcome_msg = "💎 به ربات تحلیل و داده‌های زنده Orakle Market خوش آمدید.\n\nشما با موفقیت ثبت نام شدید و هر ۳۰ دقیقه جدیدترین قیمت‌های بازار را دریافت خواهید کرد."
+                            # ۱. متن اختصاصی و فوق‌العاده شیک خوش‌آمدگویی
+                            welcome_msg = """💎 **به سامانه هوشمند ORAKLE MARKET خوش آمدید**
+
+─── ⋆ 💎 ⋆ ───
+
+بسیار خرسندیم که به جمع معامله‌گران و سرمایه‌گذاران حرفه‌ای پیوسته‌اید. 
+
+⚡️ **خدمات اختصاصی این ربات:**
+• دریافت خودکار **داشبورد زنده قیمت‌ها** (هر ۳۰ دقیقه یک‌بار)
+• دسترسی به نرخ ۳۰ دارایی برتر جهان شامل ارزهای دیجیتال، کمودیتی‌ها و شاخص‌های بورس بین‌الملل
+
+📌 **جهت مشاهده تحلیل جامع کلان، بررسی‌های ژئوپلیتیک و روان‌شناسی بازار به کانال تلگرام ما بپیوندید:**
+
+─── ⋆ 💎 ⋆ ───
+
+✨ **مرجع تخصصی تحلیل‌های ژئوپلیتیک و مالی**
+✨ **به خانواده بزرگ ((پیشگوی مارکت)) بپیوندید**
+
+🌐✦  OrakleMarket.com  ✦🌐
+🏛✦  t.me/OrakleMarket  ✦🌐"""
+                            
+                            # ارسال پیام خوش‌آمدگویی
                             send_telegram_message(chat_id, welcome_msg, "خوش‌آمدگویی")
+                            
+                            # ۲. ارسال بلافاصله داشبورد زنده قیمت‌ها به کاربر جدید
+                            price_text = generate_price_dashboard_text()
+                            send_telegram_message(chat_id, price_text, "داشبورد قیمت کاربر جدید")
+                            
         except Exception as e:
             pass
         time.sleep(2)
@@ -316,16 +342,13 @@ def generate_price_dashboard_text():
     date_header = get_formatted_dates()
     prices, _ = get_live_prices_and_fng()
     return f"""💎 **ORAKLE MARKET | داشبورد زنده قیمت‌ها**
-
 ─── ⋆ 💎 ⋆ ───
-
 
 {date_header}
 
-─── ⋆ 🏆 ⋆ ───
-
-
 🏆 **۱۰ ارز دیجیتال برتر بازار:**
+
+─── ⋆ 🏆 ⋆ ───
 
 • 🪙 **بیت‌کوین (BTC):** `{prices.get('BTC', 'N/A')}`
 
@@ -352,6 +375,7 @@ def generate_price_dashboard_text():
 💰 **۱۰ کمودیتی و دارایی کلیدی جهان:**
 
 ─── ⋆ 💰 ⋆ ───
+
 • 🟡 **طلای جهانی (XAU/USD):** `{prices.get('XAUUSD', 'N/A')}`
 
 • ⚪️ **نقره جهانی (XAG/USD):** `{prices.get('XAGUSD', 'N/A')}`
@@ -377,6 +401,7 @@ def generate_price_dashboard_text():
 🏢 **۱۰ شاخص بورس و سهام معتبر جهان:**
 
 ─── ⋆ 🏢 ⋆ ───
+
 • 📈 **شاخص اس‌اندپی ۵۰۰ (S&P 500):** `{prices.get('SPX', 'N/A')}`
 
 • 💻 **شاخص ناسداک (Nasdaq):** `{prices.get('NDX', 'N/A')}`
@@ -403,8 +428,8 @@ def generate_price_dashboard_text():
 ✨ **مرجع تخصصی تحلیل‌های ژئوپلیتیک و مالی**
 ✨ **به خانواده بزرگ ((پیشگوی مارکت)) بپیوندید**
 
-🌐✦ [ OrakleMarket.com ] ✦🌐
-🏛✦ [ t.me/OrakleMarket ] ✦🌐"""
+🌐✦  OrakleMarket.com  ✦🌐
+🏛✦  t.me/OrakleMarket  ✦🌐"""
 
 def job_post_2(send_to_channel=True):
     date_header = get_formatted_dates()
@@ -448,8 +473,8 @@ def job_post_2(send_to_channel=True):
     ✨ **مرجع تخصصی تحلیل‌های ژئوپلیتیک و مالی**
     ✨ **به خانواده بزرگ ((پیشگوی مارکت)) بپیوندید**
 
-    🌐✦ [ OrakleMarket.com ] ✦🌐
-    🏛✦ [ t.me/OrakleMarket ] ✦🌐
+    🌐✦  OrakleMarket.com  ✦🌐
+    🏛✦  t.me/OrakleMarket  ✦🌐
     """
     content = call_ai_with_retry(TEST_MODEL, system_prompt)
     if send_to_channel:
@@ -514,8 +539,8 @@ def job_post_3(send_to_channel=True):
     ✨ **مرجع تخصصی تحلیل‌های ژئوپلیتیک و مالی**
     ✨ **به خانواده بزرگ ((پیشگوی مارکت)) بپیوندید**
 
-    🌐✦ [ OrakleMarket.com ] ✦🌐
-    🏛✦ [ t.me/OrakleMarket ] ✦🌐
+    🌐✦  OrakleMarket.com  ✦🌐
+    🏛✦  t.me/OrakleMarket  ✦🌐
     """
     content = call_ai_with_retry(TEST_MODEL, system_prompt)
     if send_to_channel:
