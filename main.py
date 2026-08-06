@@ -5,6 +5,7 @@ from datetime import datetime, timezone, timedelta
 import xml.etree.ElementTree as ET
 import schedule
 import threading
+import os
 from flask import Flask
 
 # ==========================================
@@ -18,6 +19,35 @@ def home():
 
 def run_flask():
     app.run(host='0.0.0.0', port=10000)
+
+# ==========================================
+# 📂 مدیریت لیست کاربران ربات
+# ==========================================
+USERS_FILE = "users.json"
+ADMIN_CHAT_ID = "419462611"
+
+def load_users():
+    """خواندن آیدی تمامی کاربران ربات"""
+    if os.path.exists(USERS_FILE):
+        try:
+            with open(USERS_FILE, "r") as f:
+                return set(json.load(f))
+        except Exception:
+            return {ADMIN_CHAT_ID}
+    return {ADMIN_CHAT_ID}
+
+def save_user(chat_id):
+    """ذخیره کاربر جدید در فایل"""
+    users = load_users()
+    chat_id_str = str(chat_id)
+    if chat_id_str not in users:
+        users.add(chat_id_str)
+        try:
+            with open(USERS_FILE, "w") as f:
+                json.dump(list(users), f)
+            print(f"👤 کاربر جدید ثبت شد: {chat_id_str}")
+        except Exception as e:
+            print(f"⚠️ خطا در ذخیره کاربر: {e}")
 
 # ==========================================
 # 📅 تابع محاسبه تاریخ شمسی و میلادی
@@ -104,8 +134,7 @@ AI_API_KEY = "aa-jwE1s7n4NYOpTlDXWESYYl2LIV49wEvUvGGnKTcOpidbUhrv"
 AI_BASE_URL = "https://api.avalai.ir/v1/chat/completions" 
 
 TELEGRAM_BOT_TOKEN = "8517569208:AAG7nWMx5RCmP48yK7iTqHPr_1INQQABldU" 
-TELEGRAM_CHANNEL_ID = "@OrakleMarket"  # آیدی کانال عمومی
-MY_PERSONAL_CHAT_ID = "419462611"    #  شناسه عددی چت شخصی شما
+TELEGRAM_CHANNEL_ID = "@OrakleMarket"  
 
 TEST_MODEL = "gpt-4o-mini"
 
@@ -233,33 +262,51 @@ def get_live_prices_and_fng():
     return prices, fng_data
 
 # ==========================================
-# 📤 ارسال به تلگرام با انتخاب مقصد
+# 📤 ارسال به تلگرام با قابلیت ارسال گروهی
 # ==========================================
-def send_telegram_message(target_chat_id, message_text, post_title, delay=5):
-    print(f"📤 [{datetime.now().strftime('%H:%M:%S')}] شروع فرایند ارسال {post_title} به {target_chat_id}...")
+def send_telegram_message(target_chat_id, message_text, post_title, delay=2):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {"chat_id": target_chat_id, "text": message_text, "parse_mode": "Markdown"}
     
     session = requests.Session()
-    attempt = 1
+    try:
+        res = session.post(url, json=payload, timeout=15)
+        if res.status_code == 200:
+            return True
+        else:
+            clean_payload = {"chat_id": target_chat_id, "text": message_text}
+            res_retry = session.post(url, json=clean_payload, timeout=15)
+            return res_retry.status_code == 200
+    except Exception:
+        return False
+
+# ==========================================
+# 📥 شنود پیام‌های تلگرام (ثبت نام کاربران)
+# ==========================================
+def telegram_listener():
+    offset = 0
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getUpdates"
     
     while True:
         try:
-            res = session.post(url, json=payload, timeout=25)
+            res = requests.get(url, params={"offset": offset, "timeout": 30}, timeout=35)
             if res.status_code == 200:
-                print(f"✅ {post_title} با موفقیت ارسال شد!")
-                return True
-            else:
-                clean_payload = {"chat_id": target_chat_id, "text": message_text}
-                res_retry = session.post(url, json=clean_payload, timeout=25)
-                if res_retry.status_code == 200:
-                    print(f"✅ {post_title} به صورت متن ساده ارسال شد.")
-                    return True
-        except Exception:
+                data = res.json()
+                for result in data.get("result", []):
+                    offset = result["update_id"] + 1
+                    message = result.get("message", {})
+                    chat = message.get("chat", {})
+                    chat_id = chat.get("id")
+                    text = message.get("text", "")
+                    
+                    if chat_id and text:
+                        save_user(chat_id)
+                        if text == "/start":
+                            welcome_msg = "💎 به ربات تحلیل و داده‌های زنده Orakle Market خوش آمدید.\n\nشما با موفقیت ثبت نام شدید و هر ۳۰ دقیقه جدیدترین قیمت‌های بازار را دریافت خواهید کرد."
+                            send_telegram_message(chat_id, welcome_msg, "خوش‌آمدگویی")
+        except Exception as e:
             pass
-            
-        attempt += 1
-        time.sleep(delay)
+        time.sleep(2)
 
 # ==========================================
 # 📮 توابع ساخت متون پست‌ها
@@ -467,43 +514,41 @@ def job_post_3(send_to_channel=True):
 # ⏱ توابع زمان‌بندی دقیق
 # ==========================================
 
-def send_price_to_bot():
-    """ارسال قیمت‌ها هر ۳۰ دقیقه فقط به ربات شخصی"""
-    text = generate_price_dashboard_text()
-    if MY_PERSONAL_CHAT_ID != "YOUR_CHAT_ID":
-        send_telegram_message(MY_PERSONAL_CHAT_ID, text, "داشبورد قیمت (ربات شخصی)")
+def send_price_to_all_bot_users():
+    """ارسال داشبورد قیمت‌ها هر ۳۰ دقیقه به تمام کاربران ثبت‌نام‌شده در ربات"""
+    price_text = generate_price_dashboard_text()
+    users = load_users()
+    print(f"📤 [{datetime.now().strftime('%H:%M:%S')}] شروع ارسال قیمت‌ها به {len(users)} کاربر ربات...")
+    for user_id in users:
+        send_telegram_message(user_id, price_text, "داشبورد قیمت کاربر")
+        time.sleep(0.05)
 
 def send_daily_channel_posts():
-    """ارسال پست‌های ۱ و ۲ و ۳ به کانال تلگرام روزی ۱ بار سر ساعت ۰۸:۰۰ صبح"""
-    # ارسال پست ۱ به کانال
+    """ارسال تمام پست‌ها به کانال عمومی روزی ۱ بار ساعت ۰۸:۰۰ صبح"""
     price_text = generate_price_dashboard_text()
     send_telegram_message(TELEGRAM_CHANNEL_ID, price_text, "پست ۱ (داشبورد قیمت کانال)")
-    
-    # ارسال پست ۲ و ۳ به کانال
     job_post_2(send_to_channel=True)
     job_post_3(send_to_channel=True)
 
 # ==========================================
-# ⏰ تنظیم زمان‌بندی
+# ⏰ تنظیم زمان‌بندی و اجرا
 # ==========================================
 
-# ۱. ارسال داشبورد قیمت‌ها به ربات شخصی: هر ۳۰ دقیقه یک‌بار
-schedule.every(30).minutes.do(send_price_to_bot)
-
-# ۲. ارسال هر سه پست به کانال عمومی: روزی ۱ بار (ساعت ۰۸:۰۰ صبح)
+schedule.every(30).minutes.do(send_price_to_all_bot_users)
 schedule.every().day.at("08:00").do(send_daily_channel_posts)
 
 if __name__ == "__main__":
     threading.Thread(target=run_flask, daemon=True).start()
+    threading.Thread(target=telegram_listener, daemon=True).start()
     
-    print("🚀 ربات با موفقیت روشن شد.")
+    print("🚀 ربات با موفقیت روشن شد و شنود کاربران فعال گردید.")
     print("⏰ تنظیمات:")
-    print("   - ارسال داشبورد قیمت به ربات شخصی: هر ۳۰ دقیقه")
-    print("   - ارسال تمام پست‌ها به کانال عمومی: روزی یک بار ساعت ۰۸:۰۰ صبح")
+    print("   - ارسال قیمت‌ها به تمام کاربران ربات: هر ۳۰ دقیقه")
+    print("   - ارسال کل پست‌ها به کانال عمومی: روزی یک بار ساعت ۰۸:۰۰ صبح")
     
-    # ارسال یک پیام تست فوری به چت شخصی
-    send_price_to_bot()
-    
+    # ارسال تست اولیه به کاربران
+    send_price_to_all_bot_users()
+
     while True:
         schedule.run_pending()
         time.sleep(10)
