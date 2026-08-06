@@ -1,7 +1,7 @@
 import requests
 import json
 import time
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import xml.etree.ElementTree as ET
 import schedule
 import threading
@@ -20,13 +20,92 @@ def run_flask():
     app.run(host='0.0.0.0', port=10000)
 
 # ==========================================
+# 📅 تابع محاسبه تاریخ شمسی و میلادی
+# ==========================================
+def get_formatted_dates():
+    iran_tz = timezone(timedelta(hours=3, minutes=30))
+    now = datetime.now(iran_tz)
+    
+    gregorian_months = [
+        "ژانویه", "فوریه", "مارس", "آوریل", "می", "ژوئن",
+        "ژوئیه", "آگوست", "سپتامبر", "اکتبر", "نوامبر", "دسامبر"
+    ]
+    
+    jalali_months = [
+        "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
+        "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"
+    ]
+    
+    g_day = now.day
+    g_month = gregorian_months[now.month - 1]
+    g_year = now.year
+    gregorian_str = f"📆 تقویم میلادی | {g_day} {g_month} {g_year}"
+    
+    gy = now.year
+    gm = now.month
+    gd = now.day
+    
+    g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
+    if gy % 4 == 0 and (gy % 100 != 0 or gy % 400 == 0):
+        gy2 = 1
+    else:
+        gy2 = 0
+        
+    if gm > 2:
+        jy = gy - 621
+        d = g_d_m[gm - 1] + gd + gy2
+    else:
+        jy = gy - 622
+        d = g_d_m[gm - 1] + gd
+
+    if d <= 79:
+        if gy % 4 == 1:
+            d += 11
+        else:
+            d += 10
+        if d <= 186:
+            jm = (d // 31) + 1
+            jd = (d % 31)
+            if jd == 0:
+                jm -= 1
+                jd = 31
+        else:
+            d -= 186
+            jm = (d // 30) + 7
+            jd = (d % 30)
+            if jd == 0:
+                jm -= 1
+                jd = 30
+    else:
+        d -= 79
+        if d <= 186:
+            jm = (d // 31) + 1
+            jd = (d % 31)
+            if jd == 0:
+                jm -= 1
+                jd = 31
+        else:
+            d -= 186
+            jm = (d // 30) + 7
+            jd = (d % 30)
+            if jd == 0:
+                jm -= 1
+                jd = 30
+                
+    j_month = jalali_months[jm - 1]
+    jalali_str = f"📅 تقویم شمسی | {jd} {j_month} {jy}"
+    
+    return f"{jalali_str}\n{gregorian_str}"
+
+# ==========================================
 # ⚙️ تنظیمات و کلیدهای ارتباطی
 # ==========================================
 AI_API_KEY = "aa-jwE1s7n4NYOpTlDXWESYYl2LIV49wEvUvGGnKTcOpidbUhrv" 
 AI_BASE_URL = "https://api.avalai.ir/v1/chat/completions" 
 
 TELEGRAM_BOT_TOKEN = "8517569208:AAG7nWMx5RCmP48yK7iTqHPr_1INQQABldU" 
-TELEGRAM_CHAT_ID = "@OrakleMarket"  # آیدی عمومی کانال تلگرام
+TELEGRAM_CHANNEL_ID = "@OrakleMarket"  # آیدی کانال عمومی
+MY_PERSONAL_CHAT_ID = "419462611"    #  شناسه عددی چت شخصی شما
 
 TEST_MODEL = "gpt-4o-mini"
 
@@ -154,12 +233,12 @@ def get_live_prices_and_fng():
     return prices, fng_data
 
 # ==========================================
-# 📤 ارسال به تلگرام با تلاش نامحدود
+# 📤 ارسال به تلگرام با انتخاب مقصد
 # ==========================================
-def send_telegram_message(message_text, post_title, delay=5):
-    print(f"📤 [{datetime.now().strftime('%H:%M:%S')}] شروع فرایند ارسال {post_title}...")
+def send_telegram_message(target_chat_id, message_text, post_title, delay=5):
+    print(f"📤 [{datetime.now().strftime('%H:%M:%S')}] شروع فرایند ارسال {post_title} به {target_chat_id}...")
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message_text, "parse_mode": "Markdown"}
+    payload = {"chat_id": target_chat_id, "text": message_text, "parse_mode": "Markdown"}
     
     session = requests.Session()
     attempt = 1
@@ -168,13 +247,13 @@ def send_telegram_message(message_text, post_title, delay=5):
         try:
             res = session.post(url, json=payload, timeout=25)
             if res.status_code == 200:
-                print(f"✅ {post_title} با موفقیت در کانال منتشر شد!")
+                print(f"✅ {post_title} با موفقیت ارسال شد!")
                 return True
             else:
-                clean_payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message_text}
+                clean_payload = {"chat_id": target_chat_id, "text": message_text}
                 res_retry = session.post(url, json=clean_payload, timeout=25)
                 if res_retry.status_code == 200:
-                    print(f"✅ {post_title} به صورت متن ساده منتشر شد.")
+                    print(f"✅ {post_title} به صورت متن ساده ارسال شد.")
                     return True
         except Exception:
             pass
@@ -183,12 +262,15 @@ def send_telegram_message(message_text, post_title, delay=5):
         time.sleep(delay)
 
 # ==========================================
-# 📮 توابع اجرایی پست‌ها
+# 📮 توابع ساخت متون پست‌ها
 # ==========================================
 
-def job_post_1():
+def generate_price_dashboard_text():
+    date_header = get_formatted_dates()
     prices, _ = get_live_prices_and_fng()
-    content = f"""💎 **ORAKLE MARKET | داشبورد زنده قیمت‌ها**
+    return f"""{date_header}
+
+💎 **ORAKLE MARKET | داشبورد زنده قیمت‌ها**
 ─── ⋆ 💎 ⋆ ───
 
 
@@ -273,9 +355,9 @@ def job_post_1():
 
 🌐✦ [ OrakleMarket.com ] ✦🌐
 🏛✦ [ t.me/OrakleMarket ] ✦🌐"""
-    send_telegram_message(content, "پست ۱ (داشبورد ۳۰ نماد)")
 
-def job_post_2():
+def job_post_2(send_to_channel=True):
+    date_header = get_formatted_dates()
     _, fng_data = get_live_prices_and_fng()
     val = fng_data['value']
     system_prompt = f"""
@@ -285,6 +367,8 @@ def job_post_2():
     STRICT FORMATTING RULE: ALL main headings, sub-headings, and titles MUST BE BOLD (wrapped in double asterisks like **Heading**). Do not remove bold formatting from titles!
     
     Format:
+    {date_header}
+
     😱📊 **ORAKLE MARKET | تحلیل شاخص ترس و طمع**
     ─── ⋆ 💎 ⋆ ───
 
@@ -314,9 +398,11 @@ def job_post_2():
     🏛✦ [ t.me/OrakleMarket ] ✦🌐
     """
     content = call_ai_with_retry(TEST_MODEL, system_prompt)
-    send_telegram_message(content, "پست ۲ (تحلیل ترس و طمع)")
+    if send_to_channel:
+        send_telegram_message(TELEGRAM_CHANNEL_ID, content, "پست ۲ (کانال)")
 
-def job_post_3():
+def job_post_3(send_to_channel=True):
+    date_header = get_formatted_dates()
     latest_news = get_latest_market_news()
     system_prompt = f"""
     You are 'Orakle Market', a top-tier macroeconomics and geopolitical strategist.
@@ -331,6 +417,8 @@ def job_post_3():
     STRICT FORMATTING RULE: ALL main headings, titles, and sub-headings MUST BE BOLD (wrapped in double asterisks like **Title**). Never output plain text headings without double asterisks.
 
     Format:
+    {date_header}
+
     🔮 **ORAKLE MARKET | بولتن تحلیلی تخصصی**
     ─── ⋆ 💎 ⋆ ───
 
@@ -372,34 +460,47 @@ def job_post_3():
     🏛✦ [ t.me/OrakleMarket ] ✦🌐
     """
     content = call_ai_with_retry(TEST_MODEL, system_prompt)
-    send_telegram_message(content, "پست ۳ (بولتن کلان)")
-
-def job_daily_reports():
-    job_post_2()
-    job_post_3()
+    if send_to_channel:
+        send_telegram_message(TELEGRAM_CHANNEL_ID, content, "پست ۳ (کانال)")
 
 # ==========================================
-# ⏰ تنظیم دقیق زمان‌بندی ارسال‌ها
+# ⏱ توابع زمان‌بندی دقیق
 # ==========================================
 
-# پست ۱: هر ۳۰ دقیقه یک‌بار
-schedule.every(30).minutes.do(job_post_1)
+def send_price_to_bot():
+    """ارسال قیمت‌ها هر ۳۰ دقیقه فقط به ربات شخصی"""
+    text = generate_price_dashboard_text()
+    if MY_PERSONAL_CHAT_ID != "YOUR_CHAT_ID":
+        send_telegram_message(MY_PERSONAL_CHAT_ID, text, "داشبورد قیمت (ربات شخصی)")
 
-# پست‌های ۲ و ۳: روزی یک‌بار سر ساعت ۰۸:۰۰ صبح
-schedule.every().day.at("08:00").do(job_daily_reports)
+def send_daily_channel_posts():
+    """ارسال پست‌های ۱ و ۲ و ۳ به کانال تلگرام روزی ۱ بار سر ساعت ۰۸:۰۰ صبح"""
+    # ارسال پست ۱ به کانال
+    price_text = generate_price_dashboard_text()
+    send_telegram_message(TELEGRAM_CHANNEL_ID, price_text, "پست ۱ (داشبورد قیمت کانال)")
+    
+    # ارسال پست ۲ و ۳ به کانال
+    job_post_2(send_to_channel=True)
+    job_post_3(send_to_channel=True)
+
+# ==========================================
+# ⏰ تنظیم زمان‌بندی
+# ==========================================
+
+# ۱. ارسال داشبورد قیمت‌ها به ربات شخصی: هر ۳۰ دقیقه یک‌بار
+schedule.every(30).minutes.do(send_price_to_bot)
+
+# ۲. ارسال هر سه پست به کانال عمومی: روزی ۱ بار (ساعت ۰۸:۰۰ صبح)
+schedule.every().day.at("08:00").do(send_daily_channel_posts)
 
 if __name__ == "__main__":
-    # اجرای Flask در یک رشته (Thread) مجزا
     threading.Thread(target=run_flask, daemon=True).start()
     
-    print("🚀 ربات با موفقیت روشن شد و زمان‌بندی دقیق فعال گردید.")
-    print("⏰ برنامه زمانی:")
-    print("   - پست ۱ (داشبورد قیمت‌ها): هر ۳۰ دقیقه یک‌بار")
-    print("   - پست ۲ و ۳ (ترس‌وطمع + بولتن کلان): روزی ۱ بار (ساعت ۰۸:۰۰ صبح)")
+    print("🚀 ربات با موفقیت روشن شد.")
+    print("⏰ تنظیمات:")
+    print("   - ارسال داشبورد قیمت به ربات شخصی: هر ۳۰ دقیقه")
+    print("   - ارسال تمام پست‌ها به کانال عمومی: روزی یک بار ساعت ۰۸:۰۰ صبح")
     
-    # ارسال پست ۱ بلافاصله پس از روشن شدن ربات برای تست اولیه‌ی موفقیت
-    job_post_1()
-
     while True:
         schedule.run_pending()
         time.sleep(10)
