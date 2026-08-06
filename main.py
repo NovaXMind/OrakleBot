@@ -3,6 +3,21 @@ import json
 import time
 from datetime import datetime
 import xml.etree.ElementTree as ET
+import schedule
+import threading
+from flask import Flask
+
+# ==========================================
+# 🌐 وب‌سرور جهت زنده نگه داشتن Render
+# ==========================================
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Orakle Market Bot is running smoothly!"
+
+def run_flask():
+    app.run(host='0.0.0.0', port=10000)
 
 # ==========================================
 # ⚙️ تنظیمات و کلیدهای ارتباطی
@@ -11,13 +26,12 @@ AI_API_KEY = "aa-jwE1s7n4NYOpTlDXWESYYl2LIV49wEvUvGGnKTcOpidbUhrv"
 AI_BASE_URL = "https://api.avalai.ir/v1/chat/completions" 
 
 TELEGRAM_BOT_TOKEN = "8517569208:AAG7nWMx5RCmP48yK7iTqHPr_1INQQABldU" 
-TELEGRAM_CHAT_ID = "419462611"
+TELEGRAM_CHAT_ID = "@OrakleMarket"  # آیدی عمومی کانال تلگرام
 
-# مدل تست اقتصادی برای تمامی پست‌ها
 TEST_MODEL = "gpt-4o-mini"
 
 # ==========================================
-# 🤖 تابع عمومی هوش مصنوعی با تلاش نامحدود تا موفقیت
+# 🤖 تابع عمومی هوش مصنوعی با تلاش نامحدود
 # ==========================================
 def call_ai_with_retry(model_name, system_prompt, delay=4):
     headers = {
@@ -38,30 +52,26 @@ def call_ai_with_retry(model_name, system_prompt, delay=4):
             res = session.post(AI_BASE_URL, headers=headers, json=payload, timeout=90)
             if res.status_code == 200:
                 data = res.json()
-                print(f"✅ پاسخ هوش مصنوعی با موفقیت دریافت شد.")
+                print(f"✅ پاسخ هوش مصنوعی دریافت شد.")
                 return data['choices'][0]['message']['content']
             else:
-                print(f"⚠️ پاسخ غیرمنتظره سرور AI (کد {res.status_code}): {res.text}")
+                print(f"⚠️ پاسخ غیرمنتظره AI ({res.status_code}): {res.text}")
         except Exception as e:
-            print(f"⚠️ خطای ارتباطی/SSL با هوش مصنوعی در تلاش {attempt}: {e}")
+            print(f"⚠️ خطای ارتباطی AI در تلاش {attempt}: {e}")
         
         attempt += 1
-        print(f"⏳ {delay} ثانیه صبر پیش از تلاش مجدد هوش مصنوعی...")
         time.sleep(delay)
 
 # ==========================================
-# 📰 استخراج اخبار زنده مارکت برای بولتن
+# 📰 استخراج اخبار زنده مارکت
 # ==========================================
 def get_latest_market_news():
-    print("⏳ در حال بررسی و دریافت آخرین اخبار زنده بازارهای جهانی...")
     news_titles = []
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-    
+    headers = {'User-Agent': 'Mozilla/5.0'}
     rss_urls = [
         "https://www.investing.com/rss/news.rss",
         "https://www.forexlive.com/feed/news"
     ]
-    
     for url in rss_urls:
         try:
             res = requests.get(url, headers=headers, timeout=10)
@@ -71,27 +81,24 @@ def get_latest_market_news():
                     title = item.find('title')
                     if title is not None and title.text:
                         news_titles.append(title.text.strip())
-        except Exception as e:
-            print(f"⚠️ خطای دریافت فید خبری: {e}")
+        except Exception:
+            pass
             
     if not news_titles:
         news_titles = [
-            "Federal Reserve signals cautious approach on interest rate decisions amidst economic shifts.",
-            "Global markets react to geopolitical tensions and fluctuating commodity prices.",
+            "Federal Reserve signals cautious approach on interest rate decisions.",
+            "Global markets react to geopolitical tensions and commodity fluctuations.",
             "Crypto assets show resilience as institutional adoption metrics improve."
         ]
-        
-    print(f"✅ تعداد {len(news_titles)} خبر زنده استخراج شد.")
     return "\n- ".join(news_titles)
 
 # ==========================================
-# 🌐 دریافت داده‌های زنده قیمت‌ها و ترس/طمع
+# 🌐 دریافت داده‌های زنده
 # ==========================================
 def get_live_prices_and_fng():
-    print("⏳ در حال استخراج نرخ‌های زنده کریپتو، کمودیتی‌ها و سهام...")
     prices = {}
     fng_data = {'value': '25', 'classification': 'Extreme Fear'}
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+    headers = {'User-Agent': 'Mozilla/5.0'}
 
     try:
         crypto_ids = "bitcoin,ethereum,solana,binancecoin,ripple,cardano,dogecoin,avalanche-2,chainlink,tether"
@@ -109,8 +116,8 @@ def get_live_prices_and_fng():
             prices['AVAX'] = f"${data.get('avalanche-2', {}).get('usd', 0):,}"
             prices['LINK'] = f"${data.get('chainlink', {}).get('usd', 0):,}"
             prices['USDT'] = f"${data.get('tether', {}).get('usd', 1.0):.2f}"
-    except Exception as e:
-        print(f"⚠️ خطای دریافت کریپتو: {e}")
+    except Exception:
+        pass
 
     try:
         fng_res = requests.get("https://api.alternative.me/fng/", timeout=10)
@@ -118,8 +125,8 @@ def get_live_prices_and_fng():
             fng_json = fng_res.json()
             fng_data['value'] = str(fng_json['data'][0]['value'])
             fng_data['classification'] = str(fng_json['data'][0]['value_classification'])
-    except Exception as e:
-        print(f"⚠️ خطای شاخص ترس و طمع: {e}")
+    except Exception:
+        pass
 
     symbols = {
         'XAUUSD': 'GC=F', 'XAGUSD': 'SI=F', 'WTI': 'CL=F', 'BRENT': 'BZ=F',
@@ -147,7 +154,7 @@ def get_live_prices_and_fng():
     return prices, fng_data
 
 # ==========================================
-# 📤 تابع ارسال به تلگرام با تلاش نامحدود (Infinite Retry)
+# 📤 ارسال به تلگرام با تلاش نامحدود
 # ==========================================
 def send_telegram_message(message_text, post_title, delay=5):
     print(f"📤 [{datetime.now().strftime('%H:%M:%S')}] شروع فرایند ارسال {post_title}...")
@@ -159,10 +166,9 @@ def send_telegram_message(message_text, post_title, delay=5):
     
     while True:
         try:
-            print(f"🔄 ارسال {post_title} به تلگرام - تلاش شماره {attempt}...")
             res = session.post(url, json=payload, timeout=25)
             if res.status_code == 200:
-                print(f"✅ {post_title} با موفقیت در تلگرام منتشر شد!")
+                print(f"✅ {post_title} با موفقیت در کانال منتشر شد!")
                 return True
             else:
                 clean_payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message_text}
@@ -170,13 +176,10 @@ def send_telegram_message(message_text, post_title, delay=5):
                 if res_retry.status_code == 200:
                     print(f"✅ {post_title} به صورت متن ساده منتشر شد.")
                     return True
-                else:
-                    print(f"⚠️ پاسخ سرور تلگرام (کد {res_retry.status_code}): {res_retry.text}")
-        except Exception as e:
-            print(f"⚠️ خطای ارتباط با تلگرام در تلاش {attempt}: {e}")
+        except Exception:
+            pass
             
         attempt += 1
-        print(f"⏳ افت ارتباط شبکه/فیلترینگ. {delay} ثانیه صبر تا تلاش بعدی...")
         time.sleep(delay)
 
 # ==========================================
@@ -310,13 +313,11 @@ def job_post_2():
     🌐✦ [ OrakleMarket.com ] ✦🌐
     🏛✦ [ t.me/OrakleMarket ] ✦🌐
     """
-    
     content = call_ai_with_retry(TEST_MODEL, system_prompt)
     send_telegram_message(content, "پست ۲ (تحلیل ترس و طمع)")
 
 def job_post_3():
     latest_news = get_latest_market_news()
-    
     system_prompt = f"""
     You are 'Orakle Market', a top-tier macroeconomics and geopolitical strategist.
     Below are the LATEST LIVE NEWS HEADLINES scraped from top financial feeds today:
@@ -370,18 +371,35 @@ def job_post_3():
     🌐✦ [ OrakleMarket.com ] ✦🌐
     🏛✦ [ t.me/OrakleMarket ] ✦🌐
     """
-
     content = call_ai_with_retry(TEST_MODEL, system_prompt)
     send_telegram_message(content, "پست ۳ (بولتن کلان)")
 
-# ==========================================
-# 🚀 اجرای برنامه
-# ==========================================
-if __name__ == "__main__":
-    print("🚀 اجرای برنامه با اعمال برجسته‌سازی ویژه امتیاز شاخص ترس و طمع...\n")
-    
-    job_post_1()
+def job_daily_reports():
     job_post_2()
     job_post_3()
+
+# ==========================================
+# ⏰ تنظیم دقیق زمان‌بندی ارسال‌ها
+# ==========================================
+
+# پست ۱: هر ۳۰ دقیقه یک‌بار
+schedule.every(30).minutes.do(job_post_1)
+
+# پست‌های ۲ و ۳: روزی یک‌بار سر ساعت ۰۸:۰۰ صبح
+schedule.every().day.at("08:00").do(job_daily_reports)
+
+if __name__ == "__main__":
+    # اجرای Flask در یک رشته (Thread) مجزا
+    threading.Thread(target=run_flask, daemon=True).start()
     
-    print("\n🎉 تمامی ۳ پست با موفقیت قطعی تولید و در تلگرام ارسال شدند!")
+    print("🚀 ربات با موفقیت روشن شد و زمان‌بندی دقیق فعال گردید.")
+    print("⏰ برنامه زمانی:")
+    print("   - پست ۱ (داشبورد قیمت‌ها): هر ۳۰ دقیقه یک‌بار")
+    print("   - پست ۲ و ۳ (ترس‌وطمع + بولتن کلان): روزی ۱ بار (ساعت ۰۸:۰۰ صبح)")
+    
+    # ارسال پست ۱ بلافاصله پس از روشن شدن ربات برای تست اولیه‌ی موفقیت
+    job_post_1()
+
+    while True:
+        schedule.run_pending()
+        time.sleep(10)
