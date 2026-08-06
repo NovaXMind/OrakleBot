@@ -201,64 +201,69 @@ def get_latest_market_news():
     return "\n- ".join(news_titles)
 
 # ==========================================
-# 🌐 دریافت داده‌های زنده (با پشتیبان دوگانه)
+# 🌐 دریافت داده‌های زنده (اصلاح شده)
 # ==========================================
 def get_live_prices_and_fng():
     prices = {}
-    fng_data = {'value': '25', 'classification': 'Extreme Fear'}
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-
-    crypto_symbols = {
-        'BTC': ('bitcoin', 'BTCUSDT'),
-        'ETH': ('ethereum', 'ETHUSDT'),
-        'SOL': ('solana', 'SOLUSDT'),
-        'BNB': ('binancecoin', 'BNBUSDT'),
-        'XRP': ('ripple', 'XRPUSDT'),
-        'ADA': ('cardano', 'ADAUSDT'),
-        'DOGE': ('dogecoin', 'DOGEUSDT'),
-        'AVAX': ('avalanche-2', 'AVAXUSDT'),
-        'LINK': ('chainlink', 'LINKUSDT'),
-        'USDT': ('tether', 'USDTUSDT')
+    fng_data = {'value': '50', 'classification': 'Neutral'}
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     }
 
-    # 1️⃣ تلاش اول: دریافت کریپتو از CoinGecko
-    try:
-        crypto_ids = ",".join([v[0] for v in crypto_symbols.values()])
-        url = f"https://api.coingecko.com/api/v3/simple/price?ids={crypto_ids}&vs_currencies=usd"
-        res = requests.get(url, headers=headers, timeout=6)
-        if res.status_code == 200:
-            data = res.json()
-            for key, (cg_id, _) in crypto_symbols.items():
-                val = data.get(cg_id, {}).get('usd')
-                if val is not None:
+    crypto_symbols = {
+        'BTC': ('BTCUSDT', 'bitcoin'),
+        'ETH': ('ETHUSDT', 'ethereum'),
+        'SOL': ('SOLUSDT', 'solana'),
+        'BNB': ('BNBUSDT', 'binancecoin'),
+        'XRP': ('XRPUSDT', 'ripple'),
+        'ADA': ('ADAUSDT', 'cardano'),
+        'DOGE': ('DOGEUSDT', 'dogecoin'),
+        'AVAX': ('AVAXUSDT', 'avalanche-2'),
+        'LINK': ('LINKUSDT', 'chainlink'),
+        'USDT': ('USDT', 'tether')
+    }
+
+    # 1️⃣ اولویت اول: دریافت مستقیم کریپتو از بایننس
+    for key, (bn_sym, _) in crypto_symbols.items():
+        if key == 'USDT':
+            prices['USDT'] = "$1.00"
+            continue
+            
+        try:
+            bn_url = f"https://api.binance.com/api/v3/ticker/price?symbol={bn_sym}"
+            res = requests.get(bn_url, headers=headers, timeout=5)
+            if res.status_code == 200:
+                val = float(res.json().get('price', 0))
+                if val > 0:
                     if key in ['XRP', 'ADA', 'DOGE']:
                         prices[key] = f"${val:.4f}"
-                    elif key == 'USDT':
-                        prices[key] = f"${val:.2f}"
                     else:
-                        prices[key] = f"${val:,.2f}" if isinstance(val, (int, float)) else f"${val:,}"
-    except Exception:
-        pass
+                        prices[key] = f"${val:,.2f}"
+        except Exception as e:
+            print(f"خطا در بایننس برای {key}: {e}")
 
-    # 2️⃣ تلاش دوم (جایگزین): اگر هر کدام دریافت نشد، دریافت از Binance
-    for key, (_, bn_sym) in crypto_symbols.items():
-        if key not in prices or prices[key] == "N/A":
-            try:
-                bn_url = f"https://api.binance.com/api/v3/ticker/price?symbol={bn_sym}"
-                res = requests.get(bn_url, headers=headers, timeout=4)
+    # 2️⃣ پشتیبان کریپتو: اگر بایننس جواب نداد، CoinGecko چک می‌شود
+    missing_cryptos = [k for k in crypto_symbols.keys() if k not in prices]
+    if missing_cryptos:
+        try:
+            cg_ids = ",".join([crypto_symbols[k][1] for k in missing_cryptos if k != 'USDT'])
+            if cg_ids:
+                url = f"https://api.coingecko.com/api/v3/simple/price?ids={cg_ids}&vs_currencies=usd"
+                res = requests.get(url, headers=headers, timeout=6)
                 if res.status_code == 200:
-                    val = float(res.json().get('price', 0))
-                    if val > 0:
-                        if key in ['XRP', 'ADA', 'DOGE']:
-                            prices[key] = f"${val:.4f}"
-                        elif key == 'USDT':
-                            prices[key] = f"${val:.2f}"
-                        else:
-                            prices[key] = f"${val:,.2f}"
-            except Exception:
-                pass
+                    data = res.json()
+                    for key in missing_cryptos:
+                        cg_id = crypto_symbols[key][1]
+                        val = data.get(cg_id, {}).get('usd')
+                        if val is not None:
+                            if key in ['XRP', 'ADA', 'DOGE']:
+                                prices[key] = f"${val:.4f}"
+                            else:
+                                prices[key] = f"${val:,.2f}"
+        except Exception:
+            pass
 
-    # 3️⃣ تعیین مقدار پیش‌فرض نهایی در صورت عدم دسترسی به هر دو سرویس
+    # 3️⃣ مقدار پیش‌فرض برای کریپتو در صورت قطع کامل
     for key in crypto_symbols.keys():
         if key not in prices:
             prices[key] = "N/A"
@@ -276,7 +281,7 @@ def get_live_prices_and_fng():
         pass
 
     # ------------------------------------
-    # دریافت کمودیتی‌ها و شاخص‌های بورس
+    # دریافت کمودیتی‌ها و شاخص‌های بورس (Yahoo Finance با سیستم Header جدید)
     # ------------------------------------
     symbols = {
         'XAUUSD': 'GC=F', 'XAGUSD': 'SI=F', 'WTI': 'CL=F', 'BRENT': 'BZ=F',
@@ -287,15 +292,24 @@ def get_live_prices_and_fng():
         'GOOGL': 'GOOGL', 'TSLA': 'TSLA'
     }
 
+    session = requests.Session()
+    session.headers.update(headers)
+
     for key, sym in symbols.items():
         try:
-            url = f"https://query1.finance.yahoo.com/v8/finance/chart/{sym}?interval=1m&range=1d"
-            res = requests.get(url, headers=headers, timeout=5)
-            if res.status_code == 200 and res.text.strip():
+            url = f"https://query1.finance.yahoo.com/v8/finance/chart/{sym}?interval=1d&range=1d"
+            res = session.get(url, timeout=5)
+            if res.status_code == 200:
                 data = res.json()
-                meta = data['chart']['result'][0]['meta']
-                price = meta.get('regularMarketPrice')
-                prices[key] = f"${price:,.2f}" if price is not None else "N/A"
+                result = data.get('chart', {}).get('result')
+                if result:
+                    price = result[0]['meta'].get('regularMarketPrice')
+                    if price is not None:
+                        prices[key] = f"${price:,.2f}"
+                    else:
+                        prices[key] = "N/A"
+                else:
+                    prices[key] = "N/A"
             else:
                 prices[key] = "N/A"
         except Exception:
@@ -344,7 +358,6 @@ def telegram_listener():
                     if chat_id and text:
                         save_user(chat_id)
                         if text == "/start":
-                            # ۱. متن اختصاصی خوش‌آمدگویی
                             welcome_msg = """💎 **به سامانه هوشمند ORAKLE MARKET خوش آمدید**
 
 ─── ⋆ 💎 ⋆ ───
@@ -365,14 +378,12 @@ def telegram_listener():
 🌐✦  OrakleMarket.com  ✦🌐
 🏛✦  t.me/OrakleMarket  ✦🌐"""
                             
-                            # ارسال پیام خوش‌آمدگویی
                             send_telegram_message(chat_id, welcome_msg, "خوش‌آمدگویی")
                             
-                            # ۲. ارسال بلافاصله داشبورد زنده قیمت‌ها به کاربر جدید
                             price_text = generate_price_dashboard_text()
                             send_telegram_message(chat_id, price_text, "داشبورد قیمت کاربر جدید")
                             
-        except Exception as e:
+        except Exception:
             pass
         time.sleep(2)
 
