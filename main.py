@@ -346,6 +346,8 @@ def generate_price_dashboard_text():
 
 {date_header}
 
+
+
 🏆 **۱۰ ارز دیجیتال برتر بازار:**
 
 ─── ⋆ 🏆 ⋆ ───
