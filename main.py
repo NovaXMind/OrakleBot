@@ -201,34 +201,73 @@ def get_latest_market_news():
     return "\n- ".join(news_titles)
 
 # ==========================================
-# 🌐 دریافت داده‌های زنده
+# 🌐 دریافت داده‌های زنده (با پشتیبان دوگانه)
 # ==========================================
 def get_live_prices_and_fng():
     prices = {}
     fng_data = {'value': '25', 'classification': 'Extreme Fear'}
-    headers = {'User-Agent': 'Mozilla/5.0'}
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
 
+    crypto_symbols = {
+        'BTC': ('bitcoin', 'BTCUSDT'),
+        'ETH': ('ethereum', 'ETHUSDT'),
+        'SOL': ('solana', 'SOLUSDT'),
+        'BNB': ('binancecoin', 'BNBUSDT'),
+        'XRP': ('ripple', 'XRPUSDT'),
+        'ADA': ('cardano', 'ADAUSDT'),
+        'DOGE': ('dogecoin', 'DOGEUSDT'),
+        'AVAX': ('avalanche-2', 'AVAXUSDT'),
+        'LINK': ('chainlink', 'LINKUSDT'),
+        'USDT': ('tether', 'USDTUSDT')
+    }
+
+    # 1️⃣ تلاش اول: دریافت کریپتو از CoinGecko
     try:
-        crypto_ids = "bitcoin,ethereum,solana,binancecoin,ripple,cardano,dogecoin,avalanche-2,chainlink,tether"
+        crypto_ids = ",".join([v[0] for v in crypto_symbols.values()])
         url = f"https://api.coingecko.com/api/v3/simple/price?ids={crypto_ids}&vs_currencies=usd"
-        res = requests.get(url, headers=headers, timeout=10)
+        res = requests.get(url, headers=headers, timeout=6)
         if res.status_code == 200:
             data = res.json()
-            prices['BTC'] = f"${data.get('bitcoin', {}).get('usd', 0):,}"
-            prices['ETH'] = f"${data.get('ethereum', {}).get('usd', 0):,}"
-            prices['SOL'] = f"${data.get('solana', {}).get('usd', 0):,}"
-            prices['BNB'] = f"${data.get('binancecoin', {}).get('usd', 0):,}"
-            prices['XRP'] = f"${data.get('ripple', {}).get('usd', 0):.4f}"
-            prices['ADA'] = f"${data.get('cardano', {}).get('usd', 0):.4f}"
-            prices['DOGE'] = f"${data.get('dogecoin', {}).get('usd', 0):.4f}"
-            prices['AVAX'] = f"${data.get('avalanche-2', {}).get('usd', 0):,}"
-            prices['LINK'] = f"${data.get('chainlink', {}).get('usd', 0):,}"
-            prices['USDT'] = f"${data.get('tether', {}).get('usd', 1.0):.2f}"
+            for key, (cg_id, _) in crypto_symbols.items():
+                val = data.get(cg_id, {}).get('usd')
+                if val is not None:
+                    if key in ['XRP', 'ADA', 'DOGE']:
+                        prices[key] = f"${val:.4f}"
+                    elif key == 'USDT':
+                        prices[key] = f"${val:.2f}"
+                    else:
+                        prices[key] = f"${val:,.2f}" if isinstance(val, (int, float)) else f"${val:,}"
     except Exception:
         pass
 
+    # 2️⃣ تلاش دوم (جایگزین): اگر هر کدام دریافت نشد، دریافت از Binance
+    for key, (_, bn_sym) in crypto_symbols.items():
+        if key not in prices or prices[key] == "N/A":
+            try:
+                bn_url = f"https://api.binance.com/api/v3/ticker/price?symbol={bn_sym}"
+                res = requests.get(bn_url, headers=headers, timeout=4)
+                if res.status_code == 200:
+                    val = float(res.json().get('price', 0))
+                    if val > 0:
+                        if key in ['XRP', 'ADA', 'DOGE']:
+                            prices[key] = f"${val:.4f}"
+                        elif key == 'USDT':
+                            prices[key] = f"${val:.2f}"
+                        else:
+                            prices[key] = f"${val:,.2f}"
+            except Exception:
+                pass
+
+    # 3️⃣ تعیین مقدار پیش‌فرض نهایی در صورت عدم دسترسی به هر دو سرویس
+    for key in crypto_symbols.keys():
+        if key not in prices:
+            prices[key] = "N/A"
+
+    # ------------------------------------
+    # دریافت شاخص ترس و طمع
+    # ------------------------------------
     try:
-        fng_res = requests.get("https://api.alternative.me/fng/", timeout=10)
+        fng_res = requests.get("https://api.alternative.me/fng/", timeout=5)
         if fng_res.status_code == 200:
             fng_json = fng_res.json()
             fng_data['value'] = str(fng_json['data'][0]['value'])
@@ -236,6 +275,9 @@ def get_live_prices_and_fng():
     except Exception:
         pass
 
+    # ------------------------------------
+    # دریافت کمودیتی‌ها و شاخص‌های بورس
+    # ------------------------------------
     symbols = {
         'XAUUSD': 'GC=F', 'XAGUSD': 'SI=F', 'WTI': 'CL=F', 'BRENT': 'BZ=F',
         'NG': 'NG=F', 'COPPER': 'HG=F', 'PLATINUM': 'PL=F',
@@ -302,7 +344,7 @@ def telegram_listener():
                     if chat_id and text:
                         save_user(chat_id)
                         if text == "/start":
-                            # ۱. متن اختصاصی و فوق‌العاده شیک خوش‌آمدگویی
+                            # ۱. متن اختصاصی خوش‌آمدگویی
                             welcome_msg = """💎 **به سامانه هوشمند ORAKLE MARKET خوش آمدید**
 
 ─── ⋆ 💎 ⋆ ───
