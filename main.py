@@ -317,15 +317,16 @@ def generate_price_dashboard_text():
     prices, _ = get_live_prices_and_fng()
     return f"""💎 **ORAKLE MARKET | داشبورد زنده قیمت‌ها**
 
+─── ⋆ 💎 ⋆ ───
+
 
 {date_header}
 
-─── ⋆ 💎 ⋆ ───
+─── ⋆ 🏆 ⋆ ───
 
 
 🏆 **۱۰ ارز دیجیتال برتر بازار:**
 
-─── ⋆ 🏆 ⋆ ───
 • 🪙 **بیت‌کوین (BTC):** `{prices.get('BTC', 'N/A')}`
 
 • 🔹 **اتریوم (ETH):** `{prices.get('ETH', 'N/A')}`
@@ -418,10 +419,12 @@ def job_post_2(send_to_channel=True):
     Format:
     😱📊 **ORAKLE MARKET | تحلیل شاخص ترس و طمع**
 
+    ─── ⋆ 💎 ⋆ ───
+
 
     {date_header}
 
-    ─── ⋆ 💎 ⋆ ───
+    ─── ⋆ 📌 ⋆ ───
 
     📌 **وضعیت کنونی شاخص:**
 
@@ -470,10 +473,12 @@ def job_post_3(send_to_channel=True):
     Format:
     🔮 **ORAKLE MARKET | بولتن تحلیلی تخصصی**
 
+    ─── ⋆ 💎 ⋆ ───
+
 
     {date_header}
 
-    ─── ⋆ 💎 ⋆ ───
+    ─── ⋆ 🌐 ⋆ ───
 
     🌐 **تحلیل جامع کلان و ژئوپلیتیک**
 
