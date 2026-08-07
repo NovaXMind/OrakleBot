@@ -210,7 +210,6 @@ def get_live_prices_and_fng():
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
     }
 
-    # لیست نمادها (کلید: [نماد بایننس, نماد کوکوین])
     crypto_map = {
         'BTC': ('BTCUSDT', 'BTC-USDT'),
         'ETH': ('ETHUSDT', 'ETH-USDT'),
@@ -226,7 +225,6 @@ def get_live_prices_and_fng():
 
     prices['USDT'] = "$1.00"
 
-    # 1️⃣ اولویت اول: تلاش مستقیم از بایننس (با اندپوینت‌های چندگانه)
     binance_endpoints = [
         "https://api.binance.com/api/v3/ticker/price",
         "https://api1.binance.com/api/v3/ticker/price",
@@ -247,7 +245,6 @@ def get_live_prices_and_fng():
         except Exception:
             continue
 
-    # 2️⃣ اولویت دوم (پشتیبان): اگر بایننس مسدود بود -> دریافت از KuCoin
     missing_keys = [k for k in crypto_map.keys() if k not in prices]
     if missing_keys:
         try:
@@ -262,14 +259,10 @@ def get_live_prices_and_fng():
         except Exception:
             pass
 
-    # مقادیر رزرو در صورت قطعی شبکه
     for key in crypto_map.keys():
         if key not in prices:
             prices[key] = "N/A"
 
-    # ------------------------------------
-    # دریافت شاخص ترس و طمع
-    # ------------------------------------
     try:
         fng_res = requests.get("https://api.alternative.me/fng/", timeout=5)
         if fng_res.status_code == 200:
@@ -279,9 +272,6 @@ def get_live_prices_and_fng():
     except Exception:
         pass
 
-    # ------------------------------------
-    # دریافت کمودیتی‌ها و شاخص‌های بورس (Yahoo Finance)
-    # ------------------------------------
     symbols = {
         'XAUUSD': 'GC=F', 'XAGUSD': 'SI=F', 'WTI': 'CL=F', 'BRENT': 'BZ=F',
         'NG': 'NG=F', 'COPPER': 'HG=F', 'PLATINUM': 'PL=F',
@@ -314,7 +304,7 @@ def get_live_prices_and_fng():
     return prices, fng_data
 
 # ==========================================
-# 📤 ارسال به تلگرام با قابلیت ارسال گروهی
+# 📤 ارسال به تلگرام
 # ==========================================
 def send_telegram_message(target_chat_id, message_text, post_title, delay=2):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
@@ -333,7 +323,7 @@ def send_telegram_message(target_chat_id, message_text, post_title, delay=2):
         return False
 
 # ==========================================
-# 📥 شنود پیام‌های تلگرام (ثبت نام کاربران)
+# 📥 شنود پیام‌های تلگرام
 # ==========================================
 def telegram_listener():
     offset = 0
@@ -375,7 +365,6 @@ def telegram_listener():
 🏛✦  t.me/OrakleMarket  ✦🌐"""
                             
                             send_telegram_message(chat_id, welcome_msg, "خوش‌آمدگویی")
-                            
                             price_text = generate_price_dashboard_text()
                             send_telegram_message(chat_id, price_text, "داشبورد قیمت کاربر جدید")
                             
@@ -602,7 +591,7 @@ def job_post_3(send_to_channel=True):
 # ==========================================
 
 def send_price_to_all_bot_users():
-    """ارسال داشبورد قیمت‌ها هر ۳۰ دقیقه به تمام کاربران ثبت‌نام‌شده در ربات"""
+    """ارسال داشبورد قیمت‌ها به تمام کاربران ثبت‌نام‌شده در ربات"""
     price_text = generate_price_dashboard_text()
     users = load_users()
     print(f"📤 [{datetime.now().strftime('%H:%M:%S')}] شروع ارسال قیمت‌ها به {len(users)} کاربر ربات...")
@@ -633,6 +622,7 @@ if __name__ == "__main__":
     print("   - ارسال قیمت‌ها به تمام کاربران ربات: هر ۳۰ دقیقه")
     print("   - ارسال کل پست‌ها به کانال عمومی: روزی یک بار ساعت ۰۸:۰۰ صبح")
     
+    # ارسال اولیه در زمان بالا آمدن ربات
     send_price_to_all_bot_users()
 
     while True:
