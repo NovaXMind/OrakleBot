@@ -15,39 +15,10 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Orakle Market Bot is running smoothly!"
+    return "Orakle Systems are running smoothly!"
 
 def run_flask():
     app.run(host='0.0.0.0', port=10000)
-
-# ==========================================
-# 📂 مدیریت لیست کاربران ربات
-# ==========================================
-USERS_FILE = "users.json"
-ADMIN_CHAT_ID = "419462611"
-
-def load_users():
-    """خواندن آیدی تمامی کاربران ربات"""
-    if os.path.exists(USERS_FILE):
-        try:
-            with open(USERS_FILE, "r") as f:
-                return set(json.load(f))
-        except Exception:
-            return {ADMIN_CHAT_ID}
-    return {ADMIN_CHAT_ID}
-
-def save_user(chat_id):
-    """ذخیره کاربر جدید در فایل"""
-    users = load_users()
-    chat_id_str = str(chat_id)
-    if chat_id_str not in users:
-        users.add(chat_id_str)
-        try:
-            with open(USERS_FILE, "w") as f:
-                json.dump(list(users), f)
-            print(f"👤 کاربر جدید ثبت شد: {chat_id_str}")
-        except Exception as e:
-            print(f"⚠️ خطا در ذخیره کاربر: {e}")
 
 # ==========================================
 # 📅 تابع محاسبه تاریخ شمسی و میلادی
@@ -76,10 +47,7 @@ def get_formatted_dates():
     gd = now.day
     
     g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
-    if gy % 4 == 0 and (gy % 100 != 0 or gy % 400 == 0):
-        gy2 = 1
-    else:
-        gy2 = 0
+    gy2 = 1 if (gy % 4 == 0 and (gy % 100 != 0 or gy % 400 == 0)) else 0
         
     if gm > 2:
         jy = gy - 621
@@ -89,38 +57,27 @@ def get_formatted_dates():
         d = g_d_m[gm - 1] + gd
 
     if d <= 79:
-        if gy % 4 == 1:
-            d += 11
-        else:
-            d += 10
+        d += 11 if (gy % 4 == 1) else 10
         if d <= 186:
             jm = (d // 31) + 1
             jd = (d % 31)
-            if jd == 0:
-                jm -= 1
-                jd = 31
+            if jd == 0: jm -= 1; jd = 31
         else:
             d -= 186
             jm = (d // 30) + 7
             jd = (d % 30)
-            if jd == 0:
-                jm -= 1
-                jd = 30
+            if jd == 0: jm -= 1; jd = 30
     else:
         d -= 79
         if d <= 186:
             jm = (d // 31) + 1
             jd = (d % 31)
-            if jd == 0:
-                jm -= 1
-                jd = 31
+            if jd == 0: jm -= 1; jd = 31
         else:
             d -= 186
             jm = (d // 30) + 7
             jd = (d % 30)
-            if jd == 0:
-                jm -= 1
-                jd = 30
+            if jd == 0: jm -= 1; jd = 30
                 
     j_month = jalali_months[jm - 1]
     jalali_str = f"📅 تقویم شمسی | {jd} {j_month} {jy}"
@@ -128,58 +85,43 @@ def get_formatted_dates():
     return f"{jalali_str}\n{gregorian_str}"
 
 # ==========================================
-# ⚙️ تنظیمات و کلیدهای ارتباطی
+# ⚙️ تنظیمات و آیدی کانال‌ها
 # ==========================================
 AI_API_KEY = "aa-jwE1s7n4NYOpTlDXWESYYl2LIV49wEvUvGGnKTcOpidbUhrv" 
 AI_BASE_URL = "https://api.avalai.ir/v1/chat/completions" 
 
 TELEGRAM_BOT_TOKEN = "8517569208:AAG7nWMx5RCmP48yK7iTqHPr_1INQQABldU" 
-TELEGRAM_CHANNEL_ID = "@OrakleMarket"  
+
+MAIN_CHANNEL_ID = "@OrakleMarket"  # کانال تحلیل‌ها
+LIVE_CHANNEL_ID = "@OrakleLive"    # کانال داشبورد قیمت‌ها
 
 TEST_MODEL = "gpt-4o-mini"
 
 # ==========================================
-# 🤖 تابع عمومی هوش مصنوعی با تلاش نامحدود
+# 🤖 تابع هوش مصنوعی
 # ==========================================
 def call_ai_with_retry(model_name, system_prompt, delay=4):
-    headers = {
-        "Authorization": f"Bearer {AI_API_KEY}",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "model": model_name,
-        "messages": [{"role": "system", "content": system_prompt}]
-    }
-
+    headers = {"Authorization": f"Bearer {AI_API_KEY}", "Content-Type": "application/json"}
+    payload = {"model": model_name, "messages": [{"role": "system", "content": system_prompt}]}
     session = requests.Session()
     attempt = 1
-    
     while True:
         try:
-            print(f"⏳ درخواست از هوش مصنوعی ({model_name}) - تلاش شماره {attempt}...")
             res = session.post(AI_BASE_URL, headers=headers, json=payload, timeout=90)
             if res.status_code == 200:
-                data = res.json()
-                print(f"✅ پاسخ هوش مصنوعی دریافت شد.")
-                return data['choices'][0]['message']['content']
-            else:
-                print(f"⚠️ پاسخ غیرمنتظره AI ({res.status_code}): {res.text}")
-        except Exception as e:
-            print(f"⚠️ خطای ارتباطی AI در تلاش {attempt}: {e}")
-        
+                return res.json()['choices'][0]['message']['content']
+        except Exception:
+            pass
         attempt += 1
         time.sleep(delay)
 
 # ==========================================
-# 📰 استخراج اخبار زنده مارکت
+# 📰 دریافت اخبار
 # ==========================================
 def get_latest_market_news():
     news_titles = []
     headers = {'User-Agent': 'Mozilla/5.0'}
-    rss_urls = [
-        "https://www.investing.com/rss/news.rss",
-        "https://www.forexlive.com/feed/news"
-    ]
+    rss_urls = ["https://www.investing.com/rss/news.rss", "https://www.forexlive.com/feed/news"]
     for url in rss_urls:
         try:
             res = requests.get(url, headers=headers, timeout=10)
@@ -191,144 +133,102 @@ def get_latest_market_news():
                         news_titles.append(title.text.strip())
         except Exception:
             pass
-            
-    if not news_titles:
-        news_titles = [
-            "Federal Reserve signals cautious approach on interest rate decisions.",
-            "Global markets react to geopolitical tensions and commodity fluctuations.",
-            "Crypto assets show resilience as institutional adoption metrics improve."
-        ]
-    return "\n- ".join(news_titles)
+    return "\n- ".join(news_titles) if news_titles else "Market operating with standard liquidity."
 
 # ==========================================
-# 🌐 دریافت داده‌های زنده (با بایننس + KuCoin پشتیبان)
+# 🌐 دریافت داده‌های ۵۰ دارایی برتر
 # ==========================================
 def get_live_prices_and_fng():
     prices = {}
     fng_data = {'value': '50', 'classification': 'Neutral'}
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
-    }
+    headers = {'User-Agent': 'Mozilla/5.0'}
 
+    # ۲۰ کریپتوکارنسی برتر
     crypto_map = {
-        'BTC': ('BTCUSDT', 'BTC-USDT'),
-        'ETH': ('ETHUSDT', 'ETH-USDT'),
-        'SOL': ('SOLUSDT', 'SOL-USDT'),
-        'BNB': ('BNBUSDT', 'BNB-USDT'),
-        'XRP': ('XRPUSDT', 'XRP-USDT'),
-        'ADA': ('ADAUSDT', 'ADA-USDT'),
-        'DOGE': ('DOGEUSDT', 'DOGE-USDT'),
-        'AVAX': ('AVAXUSDT', 'AVAX-USDT'),
-        'LINK': ('LINKUSDT', 'LINK-USDT'),
-        'USDT': ('USDT', 'USDT')
+        'BTC': 'BTCUSDT', 'ETH': 'ETHUSDT', 'SOL': 'SOLUSDT', 'BNB': 'BNBUSDT',
+        'XRP': 'XRPUSDT', 'ADA': 'ADAUSDT', 'DOGE': 'DOGEUSDT', 'AVAX': 'AVAXUSDT',
+        'LINK': 'LINKUSDT', 'TON': 'TONUSDT', 'DOT': 'DOTUSDT', 'SHIB': 'SHIBUSDT',
+        'NEAR': 'NEARUSDT', 'SUI': 'SUIUSDT', 'LTC': 'LTCUSDT', 'PEPE': 'PEPEUSDT',
+        'UNI': 'UNIUSDT', 'APT': 'APTUSDT', 'MATIC': 'POLUSDT', 'USDT': 'USDT'
     }
-
     prices['USDT'] = "$1.00"
 
-    binance_endpoints = [
-        "https://api.binance.com/api/v3/ticker/price",
-        "https://api1.binance.com/api/v3/ticker/price",
-        "https://api3.binance.com/api/v3/ticker/price"
-    ]
+    try:
+        res = requests.get("https://api.binance.com/api/v3/ticker/price", headers=headers, timeout=5)
+        if res.status_code == 200:
+            data = {item['symbol']: float(item['price']) for item in res.json()}
+            for key, bn_sym in crypto_map.items():
+                if bn_sym in data:
+                    val = data[bn_sym]
+                    if key in ['SHIB', 'PEPE']:
+                        prices[key] = f"${val:.6f}"
+                    elif key in ['XRP', 'ADA', 'DOGE']:
+                        prices[key] = f"${val:.4f}"
+                    else:
+                        prices[key] = f"${val:,.2f}"
+    except Exception:
+        pass
 
-    for endpoint in binance_endpoints:
-        if len(prices) >= 10:
-            break
-        try:
-            res = requests.get(endpoint, headers=headers, timeout=4)
-            if res.status_code == 200:
-                data = {item['symbol']: float(item['price']) for item in res.json()}
-                for key, (bn_sym, _) in crypto_map.items():
-                    if key not in prices and bn_sym in data:
-                        val = data[bn_sym]
-                        prices[key] = f"${val:.4f}" if key in ['XRP', 'ADA', 'DOGE'] else f"${val:,.2f}"
-        except Exception:
-            continue
-
-    missing_keys = [k for k in crypto_map.keys() if k not in prices]
-    if missing_keys:
-        try:
-            kc_res = requests.get("https://api.kucoin.com/api/v1/market/allTickers", headers=headers, timeout=5)
-            if kc_res.status_code == 200:
-                kc_data = {item['symbol']: float(item['last']) for item in kc_res.json().get('data', {}).get('ticker', []) if item.get('last')}
-                for key in missing_keys:
-                    kc_sym = crypto_map[key][1]
-                    if kc_sym in kc_data:
-                        val = kc_data[kc_sym]
-                        prices[key] = f"${val:.4f}" if key in ['XRP', 'ADA', 'DOGE'] else f"${val:,.2f}"
-        except Exception:
-            pass
-
-    for key in crypto_map.keys():
-        if key not in prices:
-            prices[key] = "N/A"
+    for k in crypto_map.keys():
+        if k not in prices: prices[k] = "N/A"
 
     try:
         fng_res = requests.get("https://api.alternative.me/fng/", timeout=5)
         if fng_res.status_code == 200:
-            fng_json = fng_res.json()
-            fng_data['value'] = str(fng_json['data'][0]['value'])
-            fng_data['classification'] = str(fng_json['data'][0]['value_classification'])
+            fng_data['value'] = str(fng_res.json()['data'][0]['value'])
     except Exception:
         pass
 
+    # ۱۵ کمودیتی و دارایی کلیدی
+    # ۱۵ شاخص بورس و سهام برتر
     symbols = {
         'XAUUSD': 'GC=F', 'XAGUSD': 'SI=F', 'WTI': 'CL=F', 'BRENT': 'BZ=F',
-        'NG': 'NG=F', 'COPPER': 'HG=F', 'PLATINUM': 'PL=F',
-        'PALLADIUM': 'PA=F', 'ALUMINUM': 'ALI=F', 'CORN': 'ZC=F',
+        'NG': 'NG=F', 'COPPER': 'HG=F', 'PLATINUM': 'PL=F', 'PALLADIUM': 'PA=F',
+        'ALUMINUM': 'ALI=F', 'CORN': 'ZC=F', 'WHEAT': 'ZW=F', 'SOYBEAN': 'ZS=F',
+        'COFFEE': 'KC=F', 'SUGAR': 'SB=F', 'COTTON': 'CT=F',
         'SPX': '^GSPC', 'NDX': '^IXIC', 'DJI': '^DJI', 'DXY': 'DX-Y.NYB',
-        'AAPL': 'AAPL', 'MSFT': 'MSFT', 'NVDA': 'NVDA', 'AMZN': 'AMZN',
-        'GOOGL': 'GOOGL', 'TSLA': 'TSLA'
+        'VIX': '^VIX', 'AAPL': 'AAPL', 'MSFT': 'MSFT', 'NVDA': 'NVDA',
+        'AMZN': 'AMZN', 'GOOGL': 'GOOGL', 'TSLA': 'TSLA', 'META': 'META',
+        'NFLX': 'NFLX', 'AMD': 'AMD', 'INTC': 'INTC'
     }
 
     session = requests.Session()
     session.headers.update(headers)
-
     for key, sym in symbols.items():
         try:
             url = f"https://query1.finance.yahoo.com/v8/finance/chart/{sym}?interval=1d&range=1d"
-            res = session.get(url, timeout=5)
+            res = session.get(url, timeout=4)
             if res.status_code == 200:
-                data = res.json()
-                result = data.get('chart', {}).get('result')
+                result = res.json().get('chart', {}).get('result')
                 if result:
                     price = result[0]['meta'].get('regularMarketPrice')
                     prices[key] = f"${price:,.2f}" if price is not None else "N/A"
-                else:
-                    prices[key] = "N/A"
-            else:
-                prices[key] = "N/A"
+                else: prices[key] = "N/A"
+            else: prices[key] = "N/A"
         except Exception:
             prices[key] = "N/A"
 
     return prices, fng_data
 
 # ==========================================
-# 📤 ارسال به تلگرام
+# 📤 ارسال پیام به تلگرام
 # ==========================================
-def send_telegram_message(target_chat_id, message_text, post_title, delay=2):
+def send_telegram_message(target_chat_id, message_text):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {"chat_id": target_chat_id, "text": message_text, "parse_mode": "Markdown"}
-    
-    session = requests.Session()
     try:
-        res = session.post(url, json=payload, timeout=15)
-        if res.status_code == 200:
-            return True
-        else:
-            clean_payload = {"chat_id": target_chat_id, "text": message_text}
-            res_retry = session.post(url, json=clean_payload, timeout=15)
-            return res_retry.status_code == 200
+        res = requests.post(url, json=payload, timeout=15)
+        if res.status_code != 200:
+            requests.post(url, json={"chat_id": target_chat_id, "text": message_text}, timeout=15)
     except Exception:
-        return False
+        pass
 
 # ==========================================
-# 📥 شنود پیام‌های تلگرام
+# 📥 شنود پیام‌های ربات (خوش‌آمدگویی و هدایت)
 # ==========================================
 def telegram_listener():
     offset = 0
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getUpdates"
-    
     while True:
         try:
             res = requests.get(url, params={"offset": offset, "timeout": 30}, timeout=35)
@@ -337,141 +237,85 @@ def telegram_listener():
                 for result in data.get("result", []):
                     offset = result["update_id"] + 1
                     message = result.get("message", {})
-                    chat = message.get("chat", {})
-                    chat_id = chat.get("id")
+                    chat_id = message.get("chat", {}).get("id")
                     text = message.get("text", "")
                     
-                    if chat_id and text:
-                        save_user(chat_id)
-                        if text == "/start":
-                            welcome_msg = """💎 **به سامانه هوشمند ORAKLE MARKET خوش آمدید**
+                    if chat_id and text == "/start":
+                        welcome_msg = """💎 **به مجموعه هوشمند ORAKLE MARKET خوش آمدید**
 
 ─── ⋆ 💎 ⋆ ───
 
-بسیار خرسندیم که به جمع معامله‌گران و سرمایه‌گذاران حرفه‌ای پیوسته‌اید. 
+به عنوان معامله‌گر و سرمایه‌گذار در بازارهای بین‌المللی، می‌توانید از خدمات تخصصی و مجزای مجموعه ما استفاده کنید:
 
-⚡️ **خدمات اختصاصی این ربات:**
-• دریافت خودکار **داشبورد زنده قیمت‌ها** (هر ۳۰ دقیقه یک‌بار)
-• دسترسی به نرخ ۳۰ دارایی برتر جهان شامل ارزهای دیجیتال، کمودیتی‌ها و شاخص‌های بورس بین‌الملل
+📊 **۱. کانال تحلیل‌های اختصاصی و ژئوپلیتیک:**
+جهت دسترسی به بولتن‌های تحلیلی کلان، بررسی‌های بنیادی، روان‌شناسی بازار و شاخص ترس و طمع:
+🏛✦  t.me/OrakleMarket  ✦🏛
 
-📌 **جهت مشاهده تحلیل جامع کلان، بررسی‌های ژئوپلیتیک و روان‌شناسی بازار به کانال تلگرام ما بپیوندید:**
+⚡️ **۲. کانال زنده قیمت‌ها (Orakle Live):**
+جهت دریافت لحظه‌ای و ۳ ساعته نرخ ۵۰ دارایی برتر جهان (کریپتو، کمودیتی و سهام):
+⚡️✦  t.me/OrakleLive  ✦⚡️
 
-─── ⋆ 💎 ⋆ ───
-
-✨ **مرجع تخصصی تحلیل‌های ژئوپلیتیک و مالی**
-✨ **به خانواده بزرگ ((پیشگوی مارکت)) بپیوندید**
-
+🌐 **پرتال رسمی مجموعه:**
 🌐✦  OrakleMarket.com  ✦🌐
-🏛✦  t.me/OrakleMarket  ✦🌐"""
-                            
-                            send_telegram_message(chat_id, welcome_msg, "خوش‌آمدگویی")
-                            price_text = generate_price_dashboard_text()
-                            send_telegram_message(chat_id, price_text, "داشبورد قیمت کاربر جدید")
-                            
+
+─── ⋆ 💎 ⋆ ───
+✨ **با ما یک گام از مارکت جلوتر باشید**"""
+                        send_telegram_message(chat_id, welcome_msg)
         except Exception:
             pass
         time.sleep(2)
 
 # ==========================================
-# 📮 توابع ساخت متون پست‌ها
+# 📮 تولید متن ۵۰ دارایی برای کانال قیمت
 # ==========================================
-
 def generate_price_dashboard_text():
     date_header = get_formatted_dates()
-    prices, _ = get_live_prices_and_fng()
-    return f"""💎 **ORAKLE MARKET | داشبورد زنده قیمت‌ها**
-─── ⋆ 💎 ⋆ ───
+    p, _ = get_live_prices_and_fng()
+    return f"""⚡️ **ORAKLE LIVE | داشبورد زنده قیمت‌ها**
+─── ⋆ ⚡️ ⋆ ───
 
 {date_header}
 
+🏆 **۲۰ ارز دیجیتال برتر بازار:**
+• 🪙 **بیت‌کوین (BTC):** `{p.get('BTC')}` | 🔹 **اتریوم (ETH):** `{p.get('ETH')}`
+• 🟣 **سولانا (SOL):** `{p.get('SOL')}` | 🟡 **بایننس کوین (BNB):** `{p.get('BNB')}`
+• 🪙 **ریپل (XRP):** `{p.get('XRP')}` | 💎 **تون‌کوین (TON):** `{p.get('TON')}`
+• 🔷 **کاردانو (ADA):** `{p.get('ADA')}` | 🐕 **دوج‌کوین (DOGE):** `{p.get('DOGE')}`
+• 🔴 **آوالانچ (AVAX):** `{p.get('AVAX')}` | 🔗 **چین‌لینک (LINK):** `{p.get('LINK')}`
+• 🔴 **پولکادات (DOT):** `{p.get('DOT')}` | 🐕 **شیبا (SHIB):** `{p.get('SHIB')}`
+• 🟢 **نیر (NEAR):** `{p.get('NEAR')}` | 💧 **سویی (SUI):** `{p.get('SUI')}`
+• 🪙 **لایت‌کوین (LTC):** `{p.get('LTC')}` | 🐸 **پپه (PEPE):** `{p.get('PEPE')}`
+• 🦄 **یونی‌سواپ (UNI):** `{p.get('UNI')}` | 🧬 **آپتوس (APT):** `{p.get('APT')}`
+• 🟣 **پولیگان (POL):** `{p.get('MATIC')}` | 💵 **تتر (USDT):** `{p.get('USDT')}`
 
+💰 **۱۵ کمودیتی و دارایی کلیدی:**
+• 🟡 **طلا (XAU):** `{p.get('XAUUSD')}` | ⚪️ **نقره (XAG):** `{p.get('XAGUSD')}`
+• 🛢 **نفت WTI:** `{p.get('WTI')}` | ⛽️ **نفت برنت:** `{p.get('BRENT')}`
+• 🔥 **گاز طبیعی:** `{p.get('NG')}` | 🧱 **مس:** `{p.get('COPPER')}`
+• ◽️ **پلاتین:** `{p.get('PLATINUM')}` | 🪙 **پالادیوم:** `{p.get('PALLADIUM')}`
+• ⚙️ **آلومینیوم:** `{p.get('ALUMINUM')}` | 🌽 **ذرت:** `{p.get('CORN')}`
+• 🌾 **گندم:** `{p.get('WHEAT')}` | 🫘 **سویا:** `{p.get('SOYBEAN')}`
+• ☕️ **قهوه:** `{p.get('COFFEE')}` | 🍬 **شکر:** `{p.get('SUGAR')}`
+• 🧵 **پنبه:** `{p.get('COTTON')}`
 
-🏆 **۱۰ ارز دیجیتال برتر بازار:**
+🏢 **۱۵ شاخص بورس و سهام برتر:**
+• 📈 **اس‌اندپی (S&P 500):** `{p.get('SPX')}` | 💻 **ناسداک:** `{p.get('NDX')}`
+• 🏛 **داوجونز:** `{p.get('DJI')}` | 💵 **شاخص دلار (DXY):** `{p.get('DXY')}`
+• 📊 **شاخص نوسان (VIX):** `{p.get('VIX')}` | 🍎 **اپل:** `{p.get('AAPL')}`
+• 💻 **مایکروسافت:** `{p.get('MSFT')}` | 🟢 **ان‌ویدیا:** `{p.get('NVDA')}`
+• 📦 **آمازون:** `{p.get('AMZN')}` | 🔍 **گوگل:** `{p.get('GOOGL')}`
+• 🚗 **تسلا:** `{p.get('TSLA')}` | ♾ **متا:** `{p.get('META')}`
+• 🎬 **نتفلیکس:** `{p.get('NFLX')}` | 🔴 **ای‌ام‌دی (AMD):** `{p.get('AMD')}`
+• 🟦 **اینتل (INTC):** `{p.get('INTC')}`
 
-─── ⋆ 🏆 ⋆ ───
-
-• 🪙 **بیت‌کوین (BTC):** `{prices.get('BTC', 'N/A')}`
-
-• 🔹 **اتریوم (ETH):** `{prices.get('ETH', 'N/A')}`
-
-• 🟣 **سولانا (SOL):** `{prices.get('SOL', 'N/A')}`
-
-• 🟡 **بایننس کوین (BNB):** `{prices.get('BNB', 'N/A')}`
-
-• 🪙 **ریپل (XRP):** `{prices.get('XRP', 'N/A')}`
-
-• 🔷 **کاردانو (ADA):** `{prices.get('ADA', 'N/A')}`
-
-• 🐕 **دوج‌کوین (DOGE):** `{prices.get('DOGE', 'N/A')}`
-
-• 🔴 **آوالانچ (AVAX):** `{prices.get('AVAX', 'N/A')}`
-
-• 🔗 **چین‌لینک (LINK):** `{prices.get('LINK', 'N/A')}`
-
-• 💵 **تتر (USDT):** `{prices.get('USDT', '$1.00')}`
-
-
-
-💰 **۱۰ کمودیتی و دارایی کلیدی جهان:**
-
-─── ⋆ 💰 ⋆ ───
-
-• 🟡 **طلای جهانی (XAU/USD):** `{prices.get('XAUUSD', 'N/A')}`
-
-• ⚪️ **نقره جهانی (XAG/USD):** `{prices.get('XAGUSD', 'N/A')}`
-
-• 🛢 **نفت خام آمریکا (WTI):** `{prices.get('WTI', 'N/A')}`
-
-• ⛽️ **نفت برنت (Brent):** `{prices.get('BRENT', 'N/A')}`
-
-• 🔥 **گاز طبیعی (Nat Gas):** `{prices.get('NG', 'N/A')}`
-
-• 🧱 **مس جهانی (Copper):** `{prices.get('COPPER', 'N/A')}`
-
-• ◽️ **پلاتین (Platinum):** `{prices.get('PLATINUM', 'N/A')}`
-
-• 🪙 **پالادیوم (Palladium):** `{prices.get('PALLADIUM', 'N/A')}`
-
-• ⚙️ **آلومینیوم (Aluminum):** `{prices.get('ALUMINUM', 'N/A')}`
-
-• 🌽 **ذرت (Corn):** `{prices.get('CORN', 'N/A')}`
-
-
-
-🏢 **۱۰ شاخص بورس و سهام معتبر جهان:**
-
-─── ⋆ 🏢 ⋆ ───
-
-• 📈 **شاخص اس‌اندپی ۵۰۰ (S&P 500):** `{prices.get('SPX', 'N/A')}`
-
-• 💻 **شاخص ناسداک (Nasdaq):** `{prices.get('NDX', 'N/A')}`
-
-• 🏛 **شاخص داوجونز (Dow Jones):** `{prices.get('DJI', 'N/A')}`
-
-• 💵 **شاخص دلار آمریکا (DXY):** `{prices.get('DXY', 'N/A')}`
-
-• 🍎 **سهام اپل (AAPL):** `{prices.get('AAPL', 'N/A')}`
-
-• 💻 **سهام مایکروسافت (MSFT):** `{prices.get('MSFT', 'N/A')}`
-
-• 🟢 **سهام ان‌ویدیا (NVDA):** `{prices.get('NVDA', 'N/A')}`
-
-• 📦 **سهام آمازون (AMZN):** `{prices.get('AMZN', 'N/A')}`
-
-• 🔍 **سهام گوگل (GOOGL):** `{prices.get('GOOGL', 'N/A')}`
-
-• 🚗 **سهام تسلا (TSLA):** `{prices.get('TSLA', 'N/A')}`
-
-─── ⋆ 💎 ⋆ ───
-
-
-✨ **مرجع تخصصی تحلیل‌های ژئوپلیتیک و مالی**
-✨ **به خانواده بزرگ ((پیشگوی مارکت)) بپیوندید**
-
+─── ⋆ ⚡️ ⋆ ───
 🌐✦  OrakleMarket.com  ✦🌐
-🏛✦  t.me/OrakleMarket  ✦🌐"""
+⚡️✦  t.me/OrakleLive  ✦⚡️"""
 
-def job_post_2(send_to_channel=True):
+# ==========================================
+# 📮 توابع پست‌های کانال اصلی
+# ==========================================
+def job_post_2():
     date_header = get_formatted_dates()
     _, fng_data = get_live_prices_and_fng()
     val = fng_data['value']
@@ -479,28 +323,20 @@ def job_post_2(send_to_channel=True):
     You are 'Orakle Market'. Create Post 2 in Persian analyzing the Crypto Fear & Greed Index.
     Current Index Value: {val} out of 100.
     
-    STRICT FORMATTING RULE: ALL main headings, sub-headings, and titles MUST BE BOLD (wrapped in double asterisks like **Heading**). Do not remove bold formatting from titles!
-    
+    STRICT FORMATTING RULE: ALL main headings and titles MUST BE BOLD (wrapped in double asterisks).
+
     Format:
     😱📊 **ORAKLE MARKET | تحلیل شاخص ترس و طمع**
-
     ─── ⋆ 💎 ⋆ ───
-
 
     {date_header}
 
     ─── ⋆ 📌 ⋆ ───
-
     📌 **وضعیت کنونی شاخص:**
-
-
     🎯 **امتیاز عددی شاخص:**  🔥 `[ {val} / 100 ]` 🔥
-
-
     • 🎭 **موقعیت روانی بازار:** [ترجمه فارسی وضعیت]
 
     ─── ⋆ 💡 ⋆ ───
-
     🧠 **تحلیل رفتارشناسی و روان‌شناسی معامله‌گران:**
     [تحلیل مفصل و روان‌شناختی بازار]
 
@@ -508,130 +344,85 @@ def job_post_2(send_to_channel=True):
     [توصیه حرفه‌ای معامله‌گری]
 
     ─── ⋆ 💎 ⋆ ───
-
-
-    ✨ **مرجع تخصصی تحلیل‌های ژئوپلیتیک و مالی**
-    ✨ **به خانواده بزرگ ((پیشگوی مارکت)) بپیوندید**
-
     🌐✦  OrakleMarket.com  ✦🌐
     🏛✦  t.me/OrakleMarket  ✦🌐
     """
     content = call_ai_with_retry(TEST_MODEL, system_prompt)
-    if send_to_channel:
-        send_telegram_message(TELEGRAM_CHANNEL_ID, content, "پست ۲ (کانال)")
+    send_telegram_message(MAIN_CHANNEL_ID, content)
 
-def job_post_3(send_to_channel=True):
+def job_post_3():
     date_header = get_formatted_dates()
     latest_news = get_latest_market_news()
     system_prompt = f"""
     You are 'Orakle Market', a top-tier macroeconomics and geopolitical strategist.
-    Below are the LATEST LIVE NEWS HEADLINES scraped from top financial feeds today:
+    News Today: {latest_news}
 
-    --- LATEST NEWS HEADLINES ---
-    - {latest_news}
-    -----------------------------
-
-    Based on these real-time headlines and current market dynamics, write a high-level, authoritative Macroeconomic & Geopolitical Analysis in Persian for global markets today. Use professional financial tone and deep insights.
-    
-    STRICT FORMATTING RULE: ALL main headings, titles, and sub-headings MUST BE BOLD (wrapped in double asterisks like **Title**). Never output plain text headings without double asterisks.
+    Write a high-level Macroeconomic & Geopolitical Analysis in Persian for global markets today.
+    STRICT FORMATTING RULE: ALL main headings and titles MUST BE BOLD.
 
     Format:
     🔮 **ORAKLE MARKET | بولتن تحلیلی تخصصی**
-
     ─── ⋆ 💎 ⋆ ───
-
 
     {date_header}
 
     ─── ⋆ 🌐 ⋆ ───
-
     🌐 **تحلیل جامع کلان و ژئوپلیتیک**
-
     • 🧭 **جهت‌گیری کلی بازار:** [صعودی / نزولی / خنثی]
     • 📊 **شاخص سنتیمنت (Sentiment Index):** [عددی بین ۱۰- تا ۱۰+]
 
     • 📖 **روایت اصلی بازار (Core Narrative):** 
-    [تحلیل مفصل، عمیق و روان بر اساس اخبار فوق، وضعیت تورم، سیاست‌های پولی بانک‌های مرکزی و ریسک‌های ژئوپلیتیک]
+    [تحلیل مفصل، عمیق و روان بر اساس اخبار، تورم، نرخ بهره و ریسک‌های ژئوپلیتیک]
 
     ─── ⋆ 📊 ⋆ ───
-
     📊 **ارزیابی تفکیکی و تخصصی بازارهای جهانی**
-
     • 💵 **شاخص دلار و جفت‌ارزهای فارکس (DXY & Forex):** [تحلیل]
     • 🟡 **انس جهانی طلا و فلزات (Gold & Commodities):** [تحلیل]
     • 🪙 **بازار کریپتوکارنسی (Crypto Market):** [تحلیل]
 
     ─── ⋆ 🎯 ⋆ ───
-
     🎯 **سناریوهای محتمل معامله‌گری**
-
     • 🟢 **سناریوی اصلی:** [توضیح]
     • 🔴 **سناریوی جایگزین:** [توضیح]
 
     ─── ⋆ 📌 ⋆ ───
-
     📌 **خلاصه و جمع‌بندی تحلیلی (Quick Summary):**
     [۳ بند کوتاه]
 
     ─── ⋆ 💎 ⋆ ───
-
-
-    ✨ **مرجع تخصصی تحلیل‌های ژئوپلیتیک و مالی**
-    ✨ **به خانواده بزرگ ((پیشگوی مارکت)) بپیوندید**
-
     🌐✦  OrakleMarket.com  ✦🌐
     🏛✦  t.me/OrakleMarket  ✦🌐
     """
     content = call_ai_with_retry(TEST_MODEL, system_prompt)
-    if send_to_channel:
-        send_telegram_message(TELEGRAM_CHANNEL_ID, content, "پست ۳ (کانال)")
+    send_telegram_message(MAIN_CHANNEL_ID, content)
 
-# ==========================================
-# ⏱ توابع زمان‌بندی دقیق
-# ==========================================
-
-def send_price_to_all_bot_users():
-    """ارسال داشبورد قیمت‌ها هر ۳۰ دقیقه به پیوی تمام کاربران ربات"""
+def send_price_to_live_channel():
+    """ارسال داشبورد قیمت‌ها به کانال OrakleLive هر ۳ ساعت"""
     price_text = generate_price_dashboard_text()
-    users = load_users()
-    print(f"📤 [{datetime.now().strftime('%H:%M:%S')}] شروع ارسال قیمت‌ها به {len(users)} کاربر ربات...")
-    for user_id in users:
-        send_telegram_message(user_id, price_text, "داشبورد قیمت کاربر")
-        time.sleep(0.05)
-
-def send_price_to_channel():
-    """ارسال داشبورد قیمت‌ها هر ۳ ساعت یک‌بار به کانال عمومی"""
-    price_text = generate_price_dashboard_text()
-    print(f"📢 [{datetime.now().strftime('%H:%M:%S')}] ارسال داشبورد قیمت‌ها به کانال...")
-    send_telegram_message(TELEGRAM_CHANNEL_ID, price_text, "داشبورد قیمت کانال")
+    print(f"📢 [{datetime.now().strftime('%H:%M:%S')}] ارسال ۵۰ قیمت به کانال @OrakleLive...")
+    send_telegram_message(LIVE_CHANNEL_ID, price_text)
 
 # ==========================================
-# ⏰ تنظیم زمان‌بندی و اجرا
+# ⏰ تنظیم زمان‌بندی
 # ==========================================
 
-# ۱. ارسال قیمت‌ها به پیوی کاربران ربات (هر ۳۰ دقیقه)
-schedule.every(30).minutes.do(send_price_to_all_bot_users)
+# ۱. ارسال ۵۰ قیمت زنده به کانال OrakleLive (هر ۳ ساعت یک‌بار)
+schedule.every(3).hours.do(send_price_to_live_channel)
 
-# ۲. ارسال قیمت‌ها به کانال عمومی (هر ۳ ساعت یک‌بار)
-schedule.every(3).hours.do(send_price_to_channel)
-
-# ۳. ارسال تحلیل‌های متنی هوش مصنوعی به کانال (روزی یک‌بار)
-schedule.every().day.at("09:00").do(job_post_2, send_to_channel=True)
-schedule.every().day.at("09:05").do(job_post_3, send_to_channel=True)
+# ۲. ارسال تحلیل‌های متنی AI به کانال اصلی OrakleMarket (روزی یک‌بار)
+schedule.every().day.at("09:00").do(job_post_2)
+schedule.every().day.at("09:05").do(job_post_3)
 
 if __name__ == "__main__":
     threading.Thread(target=run_flask, daemon=True).start()
     threading.Thread(target=telegram_listener, daemon=True).start()
     
-    print("🚀 ربات Orakle Market با موفقیت اجرا شد.")
-    print("⏰ زمان‌بندی فعال شده:")
-    print("   - پیوی کاربران ربات: ارسال قیمت هر ۳۰ دقیقه")
-    print("   - کانال عمومی تلگرام: ارسال قیمت هر ۳ ساعت یک‌بار (۸ بار در روز)")
-    print("   - کانال عمومی تلگرام: ارسال تحلیل‌های AI روزی یک‌بار ساعت ۰۹:۰۰ صبح")
+    print("🚀 سیستم‌های Orakle Market با موفقیت راه اندازی شدند.")
+    print("📌 کانال اصلی (@OrakleMarket): مخصوص تحلیل‌های هوش مصنوعی (ساعت ۰۹:۰۰)")
+    print("⚡️ کانال قیمت (@OrakleLive): مخصوص ۵0 قیمت زنده (هر ۳ ساعت)")
     
-    # ارسال تست اولیه در زمان استارت ربات
-    send_price_to_all_bot_users()
-    send_price_to_channel()
+    # تست اولیه در زمان استارت
+    send_price_to_live_channel()
 
     while True:
         schedule.run_pending()
