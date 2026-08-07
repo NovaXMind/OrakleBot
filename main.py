@@ -136,7 +136,7 @@ def get_latest_market_news():
     return "\n- ".join(news_titles) if news_titles else "Market operating with standard liquidity."
 
 # ==========================================
-# 🌐 دریافت داده‌های ۵۰ دارایی برتر
+# 🌐 دریافت داده‌های ۶۰ دارایی برتر (۳۰ کریپتو + ۳۰ دارایی کلان)
 # ==========================================
 def get_live_prices_and_fng():
     prices = {}
@@ -148,7 +148,10 @@ def get_live_prices_and_fng():
         'XRP': 'XRPUSDT', 'ADA': 'ADAUSDT', 'DOGE': 'DOGEUSDT', 'AVAX': 'AVAXUSDT',
         'LINK': 'LINKUSDT', 'TON': 'TONUSDT', 'DOT': 'DOTUSDT', 'SHIB': 'SHIBUSDT',
         'NEAR': 'NEARUSDT', 'SUI': 'SUIUSDT', 'LTC': 'LTCUSDT', 'PEPE': 'PEPEUSDT',
-        'UNI': 'UNIUSDT', 'APT': 'APTUSDT', 'MATIC': 'POLUSDT', 'USDT': 'USDT'
+        'UNI': 'UNIUSDT', 'APT': 'APTUSDT', 'MATIC': 'POLUSDT', 'TRX': 'TRXUSDT',
+        'BCH': 'BCHUSDT', 'XLM': 'XLMUSDT', 'ETC': 'ETCUSDT', 'FIL': 'FILUSDT',
+        'ICP': 'ICPUSDT', 'RENDER': 'RENDERUSDT', 'ARARB': 'ARBUSDT', 'OP': 'OPUSDT',
+        'FET': 'FETUSDT', 'USDT': 'USDT'
     }
     prices['USDT'] = "$1.00"
 
@@ -161,7 +164,7 @@ def get_live_prices_and_fng():
                     val = data[bn_sym]
                     if key in ['SHIB', 'PEPE']:
                         prices[key] = f"${val:.6f}"
-                    elif key in ['XRP', 'ADA', 'DOGE']:
+                    elif key in ['XRP', 'ADA', 'DOGE', 'TRX', 'XLM']:
                         prices[key] = f"${val:.4f}"
                     else:
                         prices[key] = f"${val:,.2f}"
@@ -249,7 +252,7 @@ def telegram_listener():
 🏛✦  t.me/OrakleMarket  ✦🏛
 
 ⚡️ **۲. کانال زنده قیمت‌ها (Orakle Live):**
-جهت دریافت لحظه‌ای و ۳ ساعته نرخ ۵۰ دارایی برتر جهان (کریپتو، کمودیتی و سهام):
+جهت دریافت لحظه‌ای و ۳ ساعته نرخ ۶۰ دارایی برتر جهان (۳۰ ارز دیجیتال، کمودیتی و سهام):
 ⚡️✦  t.me/OrakleLive  ✦⚡️
 
 🌐 **پرتال رسمی مجموعه:**
@@ -263,7 +266,7 @@ def telegram_listener():
         time.sleep(2)
 
 # ==========================================
-# 📮 ساخت متن داشبورد قیمت‌ها
+# 📮 ساخت متن داشبورد قیمت‌ها (۳۰ کریپتو)
 # ==========================================
 def generate_price_dashboard_text():
     date_header = get_formatted_dates()
@@ -276,7 +279,7 @@ def generate_price_dashboard_text():
 
 
 
-🏆 **۲۰ ارز دیجیتال برتر بازار:**
+🏆 **۳۰ ارز دیجیتال برتر بازار:**
 
 ─── ⋆ 🏆 ⋆ ───
 
@@ -291,6 +294,8 @@ def generate_price_dashboard_text():
 • 🪙 **ریپل (XRP):** `{p.get('XRP')}`
 
 • 💎 **تون‌کوین (TON):** `{p.get('TON')}`
+
+• 🔴 **ترون (TRX):** `{p.get('TRX')}`
 
 • 🔷 **کاردانو (ADA):** `{p.get('ADA')}`
 
@@ -317,6 +322,24 @@ def generate_price_dashboard_text():
 • 🧬 **آپتوس (APT):** `{p.get('APT')}`
 
 • 🟣 **پولیگان (POL):** `{p.get('MATIC')}`
+
+• 🟢 **بیت‌کوین کش (BCH):** `{p.get('BCH')}`
+
+• ⭐️ **استلار (XLM):** `{p.get('XLM')}`
+
+• 🔹 **اتریوم کلاسیک (ETC):** `{p.get('ETC')}`
+
+• 📁 **فایل‌کوین (FIL):** `{p.get('FIL')}`
+
+• 🌐 **آی‌سی‌پی (ICP):** `{p.get('ICP')}`
+
+• 🎨 **رندر (RENDER):** `{p.get('RENDER')}`
+
+• 🔵 **آربیتروم (ARB):** `{p.get('ARARB')}`
+
+• 🔴 **اپتیمیزم (OP):** `{p.get('OP')}`
+
+• 🤖 **فت آی‌آی (FET):** `{p.get('FET')}`
 
 • 💵 **تتر (USDT):** `{p.get('USDT')}`
 
@@ -509,14 +532,14 @@ def job_post_3():
 
 def send_price_to_live_channel():
     price_text = generate_price_dashboard_text()
-    print(f"📢 [{datetime.now().strftime('%H:%M:%S')}] ارسال ۵۰ قیمت به کانال @OrakleLive...")
+    print(f"📢 [{datetime.now().strftime('%H:%M:%S')}] ارسال ۶۰ قیمت به کانال @OrakleLive...")
     send_telegram_message(LIVE_CHANNEL_ID, price_text)
 
 # ==========================================
 # ⏰ تنظیم زمان‌بندی
 # ==========================================
 
-# ۱. ارسال ۵۰ قیمت زنده به کانال OrakleLive (هر ۳ ساعت یک‌بار)
+# ۱. ارسال ۶۰ قیمت زنده به کانال OrakleLive (هر ۳ ساعت یک‌بار)
 schedule.every(3).hours.do(send_price_to_live_channel)
 
 # ۲. ارسال تحلیل‌های متنی AI به کانال اصلی OrakleMarket (روزی یک‌بار)
@@ -529,11 +552,11 @@ if __name__ == "__main__":
     
     print("🚀 سیستم‌های Orakle Market با موفقیت راه اندازی شدند.")
     print("📌 کانال اصلی (@OrakleMarket): مخصوص تحلیل‌های هوش مصنوعی (ساعت ۰۹:۰۰)")
-    print("⚡️ کانال قیمت (@OrakleLive): مخصوص ۵۰ قیمت زنده (هر ۳ ساعت)")
+    print("⚡️ کانال قیمت (@OrakleLive): مخصوص ۶۰ قیمت زنده (هر ۳ ساعت)")
     
     # 🧪 ارسال تست کامل تمام پست‌ها در زمان استارت
     print("\n🧪 اجرای ارسال تست هم‌زمان تمام پست‌ها...")
-    send_price_to_live_channel() # تست پست ۵۰ قیمت
+    send_price_to_live_channel() # تست پست ۶۰ قیمت
     time.sleep(2)
     job_post_2()                  # تست پست شاخص ترس و طمع
     time.sleep(2)
