@@ -93,7 +93,7 @@ AI_BASE_URL = "https://api.avalai.ir/v1/chat/completions"
 TELEGRAM_BOT_TOKEN = "8517569208:AAG7nWMx5RCmP48yK7iTqHPr_1INQQABldU" 
 
 MAIN_CHANNEL_ID = "@OrakleMarket"  # کانال تحلیل‌ها
-LIVE_CHANNEL_ID = "@OrakleLive"    # کانال داشبورد قیمت‌ها
+LIVE_CHANNEL_ID = "@OrakleLive"    # کانال قیمت‌ها
 
 TEST_MODEL = "gpt-4o-mini"
 
@@ -143,7 +143,6 @@ def get_live_prices_and_fng():
     fng_data = {'value': '50', 'classification': 'Neutral'}
     headers = {'User-Agent': 'Mozilla/5.0'}
 
-    # ۲۰ کریپتوکارنسی برتر
     crypto_map = {
         'BTC': 'BTCUSDT', 'ETH': 'ETHUSDT', 'SOL': 'SOLUSDT', 'BNB': 'BNBUSDT',
         'XRP': 'XRPUSDT', 'ADA': 'ADAUSDT', 'DOGE': 'DOGEUSDT', 'AVAX': 'AVAXUSDT',
@@ -179,8 +178,6 @@ def get_live_prices_and_fng():
     except Exception:
         pass
 
-    # ۱۵ کمودیتی و دارایی کلیدی
-    # ۱۵ شاخص بورس و سهام برتر
     symbols = {
         'XAUUSD': 'GC=F', 'XAGUSD': 'SI=F', 'WTI': 'CL=F', 'BRENT': 'BZ=F',
         'NG': 'NG=F', 'COPPER': 'HG=F', 'PLATINUM': 'PL=F', 'PALLADIUM': 'PA=F',
@@ -224,7 +221,7 @@ def send_telegram_message(target_chat_id, message_text):
         pass
 
 # ==========================================
-# 📥 شنود پیام‌های ربات (خوش‌آمدگویی و هدایت)
+# 📥 شنود پیام‌های ربات (پاسخ خوش‌آمدگویی)
 # ==========================================
 def telegram_listener():
     offset = 0
@@ -266,51 +263,146 @@ def telegram_listener():
         time.sleep(2)
 
 # ==========================================
-# 📮 تولید متن ۵۰ دارایی برای کانال قیمت
+# 📮 ساخت متن داشبورد قیمت‌ها
 # ==========================================
 def generate_price_dashboard_text():
     date_header = get_formatted_dates()
     p, _ = get_live_prices_and_fng()
+    
     return f"""⚡️ **ORAKLE LIVE | داشبورد زنده قیمت‌ها**
 ─── ⋆ ⚡️ ⋆ ───
 
 {date_header}
 
+
+
 🏆 **۲۰ ارز دیجیتال برتر بازار:**
-• 🪙 **بیت‌کوین (BTC):** `{p.get('BTC')}` | 🔹 **اتریوم (ETH):** `{p.get('ETH')}`
-• 🟣 **سولانا (SOL):** `{p.get('SOL')}` | 🟡 **بایننس کوین (BNB):** `{p.get('BNB')}`
-• 🪙 **ریپل (XRP):** `{p.get('XRP')}` | 💎 **تون‌کوین (TON):** `{p.get('TON')}`
-• 🔷 **کاردانو (ADA):** `{p.get('ADA')}` | 🐕 **دوج‌کوین (DOGE):** `{p.get('DOGE')}`
-• 🔴 **آوالانچ (AVAX):** `{p.get('AVAX')}` | 🔗 **چین‌لینک (LINK):** `{p.get('LINK')}`
-• 🔴 **پولکادات (DOT):** `{p.get('DOT')}` | 🐕 **شیبا (SHIB):** `{p.get('SHIB')}`
-• 🟢 **نیر (NEAR):** `{p.get('NEAR')}` | 💧 **سویی (SUI):** `{p.get('SUI')}`
-• 🪙 **لایت‌کوین (LTC):** `{p.get('LTC')}` | 🐸 **پپه (PEPE):** `{p.get('PEPE')}`
-• 🦄 **یونی‌سواپ (UNI):** `{p.get('UNI')}` | 🧬 **آپتوس (APT):** `{p.get('APT')}`
-• 🟣 **پولیگان (POL):** `{p.get('MATIC')}` | 💵 **تتر (USDT):** `{p.get('USDT')}`
+
+─── ⋆ 🏆 ⋆ ───
+
+• 🪙 **بیت‌کوین (BTC):** `{p.get('BTC')}`
+
+• 🔹 **اتریوم (ETH):** `{p.get('ETH')}`
+
+• 🟣 **سولانا (SOL):** `{p.get('SOL')}`
+
+• 🟡 **بایننس کوین (BNB):** `{p.get('BNB')}`
+
+• 🪙 **ریپل (XRP):** `{p.get('XRP')}`
+
+• 💎 **تون‌کوین (TON):** `{p.get('TON')}`
+
+• 🔷 **کاردانو (ADA):** `{p.get('ADA')}`
+
+• 🐕 **دوج‌کوین (DOGE):** `{p.get('DOGE')}`
+
+• 🔴 **آوالانچ (AVAX):** `{p.get('AVAX')}`
+
+• 🔗 **چین‌لینک (LINK):** `{p.get('LINK')}`
+
+• 🔴 **پولکادات (DOT):** `{p.get('DOT')}`
+
+• 🐕 **شیبا (SHIB):** `{p.get('SHIB')}`
+
+• 🟢 **نیر (NEAR):** `{p.get('NEAR')}`
+
+• 💧 **سویی (SUI):** `{p.get('SUI')}`
+
+• 🪙 **لایت‌کوین (LTC):** `{p.get('LTC')}`
+
+• 🐸 **پپه (PEPE):** `{p.get('PEPE')}`
+
+• 🦄 **یونی‌سواپ (UNI):** `{p.get('UNI')}`
+
+• 🧬 **آپتوس (APT):** `{p.get('APT')}`
+
+• 🟣 **پولیگان (POL):** `{p.get('MATIC')}`
+
+• 💵 **تتر (USDT):** `{p.get('USDT')}`
+
+
 
 💰 **۱۵ کمودیتی و دارایی کلیدی:**
-• 🟡 **طلا (XAU):** `{p.get('XAUUSD')}` | ⚪️ **نقره (XAG):** `{p.get('XAGUSD')}`
-• 🛢 **نفت WTI:** `{p.get('WTI')}` | ⛽️ **نفت برنت:** `{p.get('BRENT')}`
-• 🔥 **گاز طبیعی:** `{p.get('NG')}` | 🧱 **مس:** `{p.get('COPPER')}`
-• ◽️ **پلاتین:** `{p.get('PLATINUM')}` | 🪙 **پالادیوم:** `{p.get('PALLADIUM')}`
-• ⚙️ **آلومینیوم:** `{p.get('ALUMINUM')}` | 🌽 **ذرت:** `{p.get('CORN')}`
-• 🌾 **گندم:** `{p.get('WHEAT')}` | 🫘 **سویا:** `{p.get('SOYBEAN')}`
-• ☕️ **قهوه:** `{p.get('COFFEE')}` | 🍬 **شکر:** `{p.get('SUGAR')}`
-• 🧵 **پنبه:** `{p.get('COTTON')}`
 
-🏢 **۱۵ شاخص بورس و سهام برتر:**
-• 📈 **اس‌اندپی (S&P 500):** `{p.get('SPX')}` | 💻 **ناسداک:** `{p.get('NDX')}`
-• 🏛 **داوجونز:** `{p.get('DJI')}` | 💵 **شاخص دلار (DXY):** `{p.get('DXY')}`
-• 📊 **شاخص نوسان (VIX):** `{p.get('VIX')}` | 🍎 **اپل:** `{p.get('AAPL')}`
-• 💻 **مایکروسافت:** `{p.get('MSFT')}` | 🟢 **ان‌ویدیا:** `{p.get('NVDA')}`
-• 📦 **آمازون:** `{p.get('AMZN')}` | 🔍 **گوگل:** `{p.get('GOOGL')}`
-• 🚗 **تسلا:** `{p.get('TSLA')}` | ♾ **متا:** `{p.get('META')}`
-• 🎬 **نتفلیکس:** `{p.get('NFLX')}` | 🔴 **ای‌ام‌دی (AMD):** `{p.get('AMD')}`
-• 🟦 **اینتل (INTC):** `{p.get('INTC')}`
+─── ⋆ 💰 ⋆ ───
+
+• 🟡 **طلای جهانی (XAU/USD):** `{p.get('XAUUSD')}`
+
+• ⚪️ **نقره جهانی (XAG/USD):** `{p.get('XAGUSD')}`
+
+• 🛢 **نفت خام آمریکا (WTI):** `{p.get('WTI')}`
+
+• ⛽️ **نفت برنت (Brent):** `{p.get('BRENT')}`
+
+• 🔥 **گاز طبیعی (Nat Gas):** `{p.get('NG')}`
+
+• 🧱 **مس جهانی (Copper):** `{p.get('COPPER')}`
+
+• ◽️ **پلاتین (Platinum):** `{p.get('PLATINUM')}`
+
+• 🪙 **پالادیوم (Palladium):** `{p.get('PALLADIUM')}`
+
+• ⚙️ **آلومینیوم (Aluminum):** `{p.get('ALUMINUM')}`
+
+• 🌽 **ذرت (Corn):** `{p.get('CORN')}`
+
+• 🌾 **گندم (Wheat):** `{p.get('WHEAT')}`
+
+• 🫘 **سویا (Soybean):** `{p.get('SOYBEAN')}`
+
+• ☕️ **قهوه (Coffee):** `{p.get('COFFEE')}`
+
+• 🍬 **شکر (Sugar):** `{p.get('SUGAR')}`
+
+• 🧵 **پنبه (Cotton):** `{p.get('COTTON')}`
+
+
+
+🏢 **۱۵ شاخص بورس و سهام معتبر جهان:**
+
+─── ⋆ 🏢 ⋆ ───
+
+• 📈 **شاخص اس‌اندپی ۵۰۰ (S&P 500):** `{p.get('SPX')}`
+
+• 💻 **شاخص ناسداک (Nasdaq):** `{p.get('NDX')}`
+
+• 🏛 **شاخص داوجونز (Dow Jones):** `{p.get('DJI')}`
+
+• 💵 **شاخص دلار آمریکا (DXY):** `{p.get('DXY')}`
+
+• 📊 **شاخص نوسان (VIX):** `{p.get('VIX')}`
+
+• 🍎 **سهام اپل (AAPL):** `{p.get('AAPL')}`
+
+• 💻 **سهام مایکروسافت (MSFT):** `{p.get('MSFT')}`
+
+• 🟢 **سهام ان‌ویدیا (NVDA):** `{p.get('NVDA')}`
+
+• 📦 **سهام آمازون (AMZN):** `{p.get('AMZN')}`
+
+• 🔍 **سهام گوگل (GOOGL):** `{p.get('GOOGL')}`
+
+• 🚗 **سهام تسلا (TSLA):** `{p.get('TSLA')}`
+
+• ♾ **سهام متا (META):** `{p.get('META')}`
+
+• 🎬 **سهام نتفلیکس (NFLX):** `{p.get('NFLX')}`
+
+• 🔴 **سهام ای‌ام‌دی (AMD):** `{p.get('AMD')}`
+
+• 🟦 **سهام اینتل (INTC):** `{p.get('INTC')}`
+
 
 ─── ⋆ ⚡️ ⋆ ───
-🌐✦  OrakleMarket.com  ✦🌐
-⚡️✦  t.me/OrakleLive  ✦⚡️"""
+
+⚡️ **کانال زنده قیمت‌ها:**
+⚡️✦  t.me/OrakleLive  ✦⚡️
+
+🏛 **کانال تحلیل‌های کلان و ژئوپلیتیک:**
+🏛✦  t.me/OrakleMarket  ✦🏛
+
+🌐 **وب‌سایت رسمی مجموعه:**
+🌐✦  OrakleMarket.com  ✦🌐"""
 
 # ==========================================
 # 📮 توابع پست‌های کانال اصلی
@@ -344,8 +436,14 @@ def job_post_2():
     [توصیه حرفه‌ای معامله‌گری]
 
     ─── ⋆ 💎 ⋆ ───
+    ⚡️ **کانال زنده قیمت‌ها:**
+    ⚡️✦  t.me/OrakleLive  ✦⚡️
+
+    🏛 **کانال تحلیل‌های کلان و ژئوپلیتیک:**
+    🏛✦  t.me/OrakleMarket  ✦🏛
+
+    🌐 **وب‌سایت رسمی مجموعه:**
     🌐✦  OrakleMarket.com  ✦🌐
-    🏛✦  t.me/OrakleMarket  ✦🌐
     """
     content = call_ai_with_retry(TEST_MODEL, system_prompt)
     send_telegram_message(MAIN_CHANNEL_ID, content)
@@ -390,14 +488,19 @@ def job_post_3():
     [۳ بند کوتاه]
 
     ─── ⋆ 💎 ⋆ ───
+    ⚡️ **کانال زنده قیمت‌ها:**
+    ⚡️✦  t.me/OrakleLive  ✦⚡️
+
+    🏛 **کانال تحلیل‌های کلان و ژئوپلیتیک:**
+    🏛✦  t.me/OrakleMarket  ✦🏛
+
+    🌐 **وب‌سایت رسمی مجموعه:**
     🌐✦  OrakleMarket.com  ✦🌐
-    🏛✦  t.me/OrakleMarket  ✦🌐
     """
     content = call_ai_with_retry(TEST_MODEL, system_prompt)
     send_telegram_message(MAIN_CHANNEL_ID, content)
 
 def send_price_to_live_channel():
-    """ارسال داشبورد قیمت‌ها به کانال OrakleLive هر ۳ ساعت"""
     price_text = generate_price_dashboard_text()
     print(f"📢 [{datetime.now().strftime('%H:%M:%S')}] ارسال ۵۰ قیمت به کانال @OrakleLive...")
     send_telegram_message(LIVE_CHANNEL_ID, price_text)
@@ -419,10 +522,15 @@ if __name__ == "__main__":
     
     print("🚀 سیستم‌های Orakle Market با موفقیت راه اندازی شدند.")
     print("📌 کانال اصلی (@OrakleMarket): مخصوص تحلیل‌های هوش مصنوعی (ساعت ۰۹:۰۰)")
-    print("⚡️ کانال قیمت (@OrakleLive): مخصوص ۵0 قیمت زنده (هر ۳ ساعت)")
+    print("⚡️ کانال قیمت (@OrakleLive): مخصوص ۵۰ قیمت زنده (هر ۳ ساعت)")
     
-    # تست اولیه در زمان استارت
-    send_price_to_live_channel()
+    # 🧪 ارسال تست کامل تمام پست‌ها در زمان استارت
+    print("\n🧪 اجرای ارسال تست هم‌زمان تمام پست‌ها...")
+    send_price_to_live_channel() # تست پست ۵۰ قیمت
+    time.sleep(2)
+    job_post_2()                  # تست پست شاخص ترس و طمع
+    time.sleep(2)
+    job_post_3()                  # تست پست بولتن تحلیلی
 
     while True:
         schedule.run_pending()
