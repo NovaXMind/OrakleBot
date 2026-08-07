@@ -415,7 +415,10 @@ def job_post_2():
     You are 'Orakle Market'. Create Post 2 in Persian analyzing the Crypto Fear & Greed Index.
     Current Index Value: {val} out of 100.
     
-    STRICT FORMATTING RULE: ALL main headings and titles MUST BE BOLD (wrapped in double asterisks).
+    CRITICAL FORMATTING INSTRUCTION FOR DIVIDERS:
+    You MUST copy every separator line EXACTLY as shown in the template below. 
+    Do NOT change the line length, do NOT add extra dashes, do NOT modify the emojis or spaces.
+    Every divider line MUST BE EXACTLY: ─── ⋆ 💎 ⋆ ─── or ─── ⋆ 📌 ⋆ ─── or ─── ⋆ 💡 ⋆ ───
 
     Format:
     😱📊 **ORAKLE MARKET | تحلیل شاخص ترس و طمع**
@@ -456,7 +459,11 @@ def job_post_3():
     News Today: {latest_news}
 
     Write a high-level Macroeconomic & Geopolitical Analysis in Persian for global markets today.
-    STRICT FORMATTING RULE: ALL main headings and titles MUST BE BOLD.
+    
+    CRITICAL FORMATTING INSTRUCTION FOR DIVIDERS:
+    You MUST copy every separator line EXACTLY as shown in the template below. 
+    Do NOT change the line length, do NOT add extra dashes, do NOT modify the emojis or spaces.
+    Every divider line MUST BE EXACTLY: ─── ⋆ 💎 ⋆ ─── or ─── ⋆ 🌐 ⋆ ─── or ─── ⋆ 📊 ⋆ ─── or ─── ⋆ 🎯 ⋆ ─── or ─── ⋆ 📌 ⋆ ───
 
     Format:
     🔮 **ORAKLE MARKET | بولتن تحلیلی تخصصی**
