@@ -591,7 +591,7 @@ def job_post_3(send_to_channel=True):
 # ==========================================
 
 def send_price_to_all_bot_users():
-    """ارسال داشبورد قیمت‌ها به تمام کاربران ثبت‌نام‌شده در ربات"""
+    """ارسال داشبورد قیمت‌ها هر ۳۰ دقیقه به پیوی تمام کاربران ربات"""
     price_text = generate_price_dashboard_text()
     users = load_users()
     print(f"📤 [{datetime.now().strftime('%H:%M:%S')}] شروع ارسال قیمت‌ها به {len(users)} کاربر ربات...")
@@ -599,31 +599,39 @@ def send_price_to_all_bot_users():
         send_telegram_message(user_id, price_text, "داشبورد قیمت کاربر")
         time.sleep(0.05)
 
-def send_daily_channel_posts():
-    """ارسال تمام پست‌ها به کانال عمومی روزی ۱ بار ساعت ۰۸:۰۰ صبح"""
+def send_price_to_channel():
+    """ارسال داشبورد قیمت‌ها هر ۳ ساعت یک‌بار به کانال عمومی"""
     price_text = generate_price_dashboard_text()
-    send_telegram_message(TELEGRAM_CHANNEL_ID, price_text, "پست ۱ (داشبورد قیمت کانال)")
-    job_post_2(send_to_channel=True)
-    job_post_3(send_to_channel=True)
+    print(f"📢 [{datetime.now().strftime('%H:%M:%S')}] ارسال داشبورد قیمت‌ها به کانال...")
+    send_telegram_message(TELEGRAM_CHANNEL_ID, price_text, "داشبورد قیمت کانال")
 
 # ==========================================
 # ⏰ تنظیم زمان‌بندی و اجرا
 # ==========================================
 
+# ۱. ارسال قیمت‌ها به پیوی کاربران ربات (هر ۳۰ دقیقه)
 schedule.every(30).minutes.do(send_price_to_all_bot_users)
-schedule.every().day.at("08:00").do(send_daily_channel_posts)
+
+# ۲. ارسال قیمت‌ها به کانال عمومی (هر ۳ ساعت یک‌بار)
+schedule.every(3).hours.do(send_price_to_channel)
+
+# ۳. ارسال تحلیل‌های متنی هوش مصنوعی به کانال (روزی یک‌بار)
+schedule.every().day.at("09:00").do(job_post_2, send_to_channel=True)
+schedule.every().day.at("09:05").do(job_post_3, send_to_channel=True)
 
 if __name__ == "__main__":
     threading.Thread(target=run_flask, daemon=True).start()
     threading.Thread(target=telegram_listener, daemon=True).start()
     
-    print("🚀 ربات با موفقیت روشن شد و شنود کاربران فعال گردید.")
-    print("⏰ تنظیمات:")
-    print("   - ارسال قیمت‌ها به تمام کاربران ربات: هر ۳۰ دقیقه")
-    print("   - ارسال کل پست‌ها به کانال عمومی: روزی یک بار ساعت ۰۸:۰۰ صبح")
+    print("🚀 ربات Orakle Market با موفقیت اجرا شد.")
+    print("⏰ زمان‌بندی فعال شده:")
+    print("   - پیوی کاربران ربات: ارسال قیمت هر ۳۰ دقیقه")
+    print("   - کانال عمومی تلگرام: ارسال قیمت هر ۳ ساعت یک‌بار (۸ بار در روز)")
+    print("   - کانال عمومی تلگرام: ارسال تحلیل‌های AI روزی یک‌بار ساعت ۰۹:۰۰ صبح")
     
-    # ارسال اولیه در زمان بالا آمدن ربات
+    # ارسال تست اولیه در زمان استارت ربات
     send_price_to_all_bot_users()
+    send_price_to_channel()
 
     while True:
         schedule.run_pending()
