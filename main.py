@@ -85,7 +85,7 @@ def get_formatted_dates():
     return f"{jalali_str}\n{gregorian_str}"
 
 # ==========================================
-# ⚙️ تنظیمات و آیدی کانال‌ها
+# ⚙️ تنظیمات، آیدی‌ها و لینک پوسترهای تصویری
 # ==========================================
 AI_API_KEY = "aa-jwE1s7n4NYOpTlDXWESYYl2LIV49wEvUvGGnKTcOpidbUhrv" 
 AI_BASE_URL = "https://api.avalai.ir/v1/chat/completions" 
@@ -96,6 +96,12 @@ MAIN_CHANNEL_ID = "@OrakleMarket"  # کانال تحلیل‌ها
 LIVE_CHANNEL_ID = "@OrakleLive"    # کانال قیمت‌ها
 
 TEST_MODEL = "gpt-4o-mini"
+
+# 📸 شناسه پوسترها (File ID یا URL) - شناسه استخراج شده را اینجا بگذارید
+POSTER_WELCOME = "https://raw.githubusercontent.com/OrakleMarket/assets/main/welcome_poster.jpg"
+POSTER_LIVE = "https://raw.githubusercontent.com/OrakleMarket/assets/main/live_prices_poster.jpg"
+POSTER_FNG = "https://raw.githubusercontent.com/OrakleMarket/assets/main/fng_poster.jpg"
+POSTER_MACRO = "https://raw.githubusercontent.com/OrakleMarket/assets/main/macro_poster.jpg"
 
 # ==========================================
 # 🤖 تابع هوش مصنوعی
@@ -136,7 +142,7 @@ def get_latest_market_news():
     return "\n- ".join(news_titles) if news_titles else "Market operating with standard liquidity."
 
 # ==========================================
-# 🌐 دریافت داده‌های ۶۰ دارایی برتر (۳۰ کریپتو + ۳۰ دارایی کلان)
+# 🌐 دریافت داده‌های ۶۰ دارایی برتر
 # ==========================================
 def get_live_prices_and_fng():
     prices = {}
@@ -211,20 +217,33 @@ def get_live_prices_and_fng():
     return prices, fng_data
 
 # ==========================================
-# 📤 ارسال پیام به تلگرام
+# 📤 توابع ارسال به تلگرام
 # ==========================================
+def send_telegram_photo(target_chat_id, photo_url_or_id, caption_text):
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
+    payload = {
+        "chat_id": target_chat_id,
+        "photo": photo_url_or_id,
+        "caption": caption_text,
+        "parse_mode": "Markdown"
+    }
+    try:
+        res = requests.post(url, json=payload, timeout=20)
+        if res.status_code != 200:
+            send_telegram_message(target_chat_id, caption_text)
+    except Exception:
+        send_telegram_message(target_chat_id, caption_text)
+
 def send_telegram_message(target_chat_id, message_text):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {"chat_id": target_chat_id, "text": message_text, "parse_mode": "Markdown"}
     try:
-        res = requests.post(url, json=payload, timeout=15)
-        if res.status_code != 200:
-            requests.post(url, json={"chat_id": target_chat_id, "text": message_text}, timeout=15)
+        requests.post(url, json=payload, timeout=15)
     except Exception:
         pass
 
 # ==========================================
-# 📥 شنود پیام‌های ربات (پاسخ خوش‌آمدگویی)
+# 📥 شنود پیام‌های ربات (پاسخ خوش‌آمدگویی + دریافت File ID عکس)
 # ==========================================
 def telegram_listener():
     offset = 0
@@ -239,8 +258,17 @@ def telegram_listener():
                     message = result.get("message", {})
                     chat_id = message.get("chat", {}).get("id")
                     text = message.get("text", "")
+                    photo_list = message.get("photo", [])
                     
-                    if chat_id and text == "/start":
+                    # 📩 ۱. اگر کاربر عکسی بفرستد، ربات File ID آن را برمی‌گرداند
+                    if chat_id and photo_list:
+                        highest_quality_photo = photo_list[-1]
+                        file_id = highest_quality_photo.get("file_id")
+                        reply_msg = f"🖼 **File ID این تصویر استخراج شد:**\n\n`{file_id}`\n\n📌 این کد را کپی کنید و در متغیر پوستر مورد نظر قرار دهید."
+                        send_telegram_message(chat_id, reply_msg)
+
+                    # 🤖 ۲. دستور /start
+                    elif chat_id and text == "/start":
                         welcome_msg = """💎 **به مجموعه هوشمند ORAKLE MARKET خوش آمدید**
 
 ─── ⋆ 💎 ⋆ ───
@@ -260,13 +288,13 @@ def telegram_listener():
 
 ─── ⋆ 💎 ⋆ ───
 ✨ **با ما یک گام از مارکت جلوتر باشید**"""
-                        send_telegram_message(chat_id, welcome_msg)
+                        send_telegram_photo(chat_id, POSTER_WELCOME, welcome_msg)
         except Exception:
             pass
         time.sleep(2)
 
 # ==========================================
-# 📮 ساخت متن داشبورد قیمت‌ها (۳۰ کریپتو)
+# 📮 ساخت متن داشبورد قیمت‌ها
 # ==========================================
 def generate_price_dashboard_text():
     date_header = get_formatted_dates()
@@ -277,147 +305,79 @@ def generate_price_dashboard_text():
 
 {date_header}
 
-
-
 🏆 **۳۰ ارز دیجیتال برتر بازار:**
-
 ─── ⋆ 🏆 ⋆ ───
 
 • 🪙 **بیت‌کوین (BTC):** `{p.get('BTC')}`
-
 • 🔹 **اتریوم (ETH):** `{p.get('ETH')}`
-
 • 🟣 **سولانا (SOL):** `{p.get('SOL')}`
-
 • 🟡 **بایننس کوین (BNB):** `{p.get('BNB')}`
-
 • 🪙 **ریپل (XRP):** `{p.get('XRP')}`
-
 • 💎 **تون‌کوین (TON):** `{p.get('TON')}`
-
 • 🔴 **ترون (TRX):** `{p.get('TRX')}`
-
 • 🔷 **کاردانو (ADA):** `{p.get('ADA')}`
-
 • 🐕 **دوج‌کوین (DOGE):** `{p.get('DOGE')}`
-
 • 🔴 **آوالانچ (AVAX):** `{p.get('AVAX')}`
-
 • 🔗 **چین‌لینک (LINK):** `{p.get('LINK')}`
-
 • 🔴 **پولکادات (DOT):** `{p.get('DOT')}`
-
 • 🐕 **شیبا (SHIB):** `{p.get('SHIB')}`
-
 • 🟢 **نیر (NEAR):** `{p.get('NEAR')}`
-
 • 💧 **سویی (SUI):** `{p.get('SUI')}`
-
 • 🪙 **لایت‌کوین (LTC):** `{p.get('LTC')}`
-
 • 🐸 **پپه (PEPE):** `{p.get('PEPE')}`
-
 • 🦄 **یونی‌سواپ (UNI):** `{p.get('UNI')}`
-
 • 🧬 **آپتوس (APT):** `{p.get('APT')}`
-
 • 🟣 **پولیگان (POL):** `{p.get('MATIC')}`
-
 • 🟢 **بیت‌کوین کش (BCH):** `{p.get('BCH')}`
-
 • ⭐️ **استلار (XLM):** `{p.get('XLM')}`
-
 • 🔹 **اتریوم کلاسیک (ETC):** `{p.get('ETC')}`
-
 • 📁 **فایل‌کوین (FIL):** `{p.get('FIL')}`
-
 • 🌐 **آی‌سی‌پی (ICP):** `{p.get('ICP')}`
-
 • 🎨 **رندر (RENDER):** `{p.get('RENDER')}`
-
 • 🔵 **آربیتروم (ARB):** `{p.get('ARARB')}`
-
 • 🔴 **اپتیمیزم (OP):** `{p.get('OP')}`
-
 • 🤖 **فت آی‌آی (FET):** `{p.get('FET')}`
-
 • 💵 **تتر (USDT):** `{p.get('USDT')}`
 
-
-
 💰 **۱۵ کمودیتی و دارایی کلیدی:**
-
 ─── ⋆ 💰 ⋆ ───
 
 • 🟡 **طلای جهانی (XAU/USD):** `{p.get('XAUUSD')}`
-
 • ⚪️ **نقره جهانی (XAG/USD):** `{p.get('XAGUSD')}`
-
 • 🛢 **نفت خام آمریکا (WTI):** `{p.get('WTI')}`
-
 • ⛽️ **نفت برنت (Brent):** `{p.get('BRENT')}`
-
 • 🔥 **گاز طبیعی (Nat Gas):** `{p.get('NG')}`
-
 • 🧱 **مس جهانی (Copper):** `{p.get('COPPER')}`
-
 • ◽️ **پلاتین (Platinum):** `{p.get('PLATINUM')}`
-
 • 🪙 **پالادیوم (Palladium):** `{p.get('PALLADIUM')}`
-
 • ⚙️ **آلومینیوم (Aluminum):** `{p.get('ALUMINUM')}`
-
 • 🌽 **ذرت (Corn):** `{p.get('CORN')}`
-
 • 🌾 **گندم (Wheat):** `{p.get('WHEAT')}`
-
 • 🫘 **سویا (Soybean):** `{p.get('SOYBEAN')}`
-
 • ☕️ **قهوه (Coffee):** `{p.get('COFFEE')}`
-
 • 🍬 **شکر (Sugar):** `{p.get('SUGAR')}`
-
 • 🧵 **پنبه (Cotton):** `{p.get('COTTON')}`
 
-
-
 🏢 **۱۵ شاخص بورس و سهام معتبر جهان:**
-
 ─── ⋆ 🏢 ⋆ ───
 
 • 📈 **شاخص اس‌اندپی ۵۰۰ (S&P 500):** `{p.get('SPX')}`
-
 • 💻 **شاخص ناسداک (Nasdaq):** `{p.get('NDX')}`
-
 • 🏛 **شاخص داوجونز (Dow Jones):** `{p.get('DJI')}`
-
 • 💵 **شاخص دلار آمریکا (DXY):** `{p.get('DXY')}`
-
 • 📊 **شاخص نوسان (VIX):** `{p.get('VIX')}`
-
 • 🍎 **سهام اپل (AAPL):** `{p.get('AAPL')}`
-
 • 💻 **سهام مایکروسافت (MSFT):** `{p.get('MSFT')}`
-
 • 🟢 **سهام ان‌ویدیا (NVDA):** `{p.get('NVDA')}`
-
 • 📦 **سهام آمازون (AMZN):** `{p.get('AMZN')}`
-
 • 🔍 **سهام گوگل (GOOGL):** `{p.get('GOOGL')}`
-
 • 🚗 **سهام تسلا (TSLA):** `{p.get('TSLA')}`
-
 • ♾ **سهام متا (META):** `{p.get('META')}`
-
 • 🎬 **سهام نتفلیکس (NFLX):** `{p.get('NFLX')}`
-
 • 🔴 **سهام ای‌ام‌دی (AMD):** `{p.get('AMD')}`
-
 • 🟦 **سهام اینتل (INTC):** `{p.get('INTC')}`
 
-
 ─── ⋆ ⚡️ ⋆ ───
-
 ⚡️ **کانال زنده قیمت‌ها:**
 ⚡️✦  t.me/OrakleLive  ✦⚡️
 
@@ -438,10 +398,9 @@ def job_post_2():
     You are 'Orakle Market'. Create Post 2 in Persian analyzing the Crypto Fear & Greed Index.
     Current Index Value: {val} out of 100.
     
-    CRITICAL FORMATTING INSTRUCTION FOR DIVIDERS:
-    You MUST copy every separator line EXACTLY as shown in the template below. 
-    Do NOT change the line length, do NOT add extra dashes, do NOT modify the emojis or spaces.
-    Every divider line MUST BE EXACTLY: ─── ⋆ 💎 ⋆ ─── or ─── ⋆ 📌 ⋆ ─── or ─── ⋆ 💡 ⋆ ───
+    CRITICAL FORMATTING INSTRUCTIONS:
+    1. You MUST copy every separator line EXACTLY: ─── ⋆ 💎 ⋆ ─── or ─── ⋆ 📌 ⋆ ─── or ─── ⋆ 💡 ⋆ ───
+    2. Keep empty line spaces between paragraphs clean and readable.
 
     Format:
     😱📊 **ORAKLE MARKET | تحلیل شاخص ترس و طمع**
@@ -472,7 +431,7 @@ def job_post_2():
     🌐✦  OrakleMarket.com  ✦🌐
     """
     content = call_ai_with_retry(TEST_MODEL, system_prompt)
-    send_telegram_message(MAIN_CHANNEL_ID, content)
+    send_telegram_photo(MAIN_CHANNEL_ID, POSTER_FNG, content)
 
 def job_post_3():
     date_header = get_formatted_dates()
@@ -483,10 +442,9 @@ def job_post_3():
 
     Write a high-level Macroeconomic & Geopolitical Analysis in Persian for global markets today.
     
-    CRITICAL FORMATTING INSTRUCTION FOR DIVIDERS:
-    You MUST copy every separator line EXACTLY as shown in the template below. 
-    Do NOT change the line length, do NOT add extra dashes, do NOT modify the emojis or spaces.
-    Every divider line MUST BE EXACTLY: ─── ⋆ 💎 ⋆ ─── or ─── ⋆ 🌐 ⋆ ─── or ─── ⋆ 📊 ⋆ ─── or ─── ⋆ 🎯 ⋆ ─── or ─── ⋆ 📌 ⋆ ───
+    CRITICAL FORMATTING INSTRUCTIONS:
+    1. You MUST copy every separator line EXACTLY: ─── ⋆ 💎 ⋆ ─── or ─── ⋆ 🌐 ⋆ ─── or ─── ⋆ 📊 ⋆ ─── or ─── ⋆ 🎯 ⋆ ─── or ─── ⋆ 📌 ⋆ ───
+    2. Keep line spacing clean and professional.
 
     Format:
     🔮 **ORAKLE MARKET | بولتن تحلیلی تخصصی**
@@ -528,21 +486,18 @@ def job_post_3():
     🌐✦  OrakleMarket.com  ✦🌐
     """
     content = call_ai_with_retry(TEST_MODEL, system_prompt)
-    send_telegram_message(MAIN_CHANNEL_ID, content)
+    send_telegram_photo(MAIN_CHANNEL_ID, POSTER_MACRO, content)
 
 def send_price_to_live_channel():
     price_text = generate_price_dashboard_text()
     print(f"📢 [{datetime.now().strftime('%H:%M:%S')}] ارسال ۶۰ قیمت به کانال @OrakleLive...")
-    send_telegram_message(LIVE_CHANNEL_ID, price_text)
+    send_telegram_photo(LIVE_CHANNEL_ID, POSTER_LIVE, price_text)
 
 # ==========================================
 # ⏰ تنظیم زمان‌بندی
 # ==========================================
 
-# ۱. ارسال ۶۰ قیمت زنده به کانال OrakleLive (هر ۳ ساعت یک‌بار)
 schedule.every(3).hours.do(send_price_to_live_channel)
-
-# ۲. ارسال تحلیل‌های متنی AI به کانال اصلی OrakleMarket (روزی یک‌بار)
 schedule.every().day.at("09:00").do(job_post_2)
 schedule.every().day.at("09:05").do(job_post_3)
 
@@ -555,7 +510,7 @@ if __name__ == "__main__":
     print("⚡️ کانال قیمت (@OrakleLive): مخصوص ۶۰ قیمت زنده (هر ۳ ساعت)")
     
     # 🧪 ارسال تست کامل تمام پست‌ها در زمان استارت
-    print("\n🧪 اجرای ارسال تست هم‌زمان تمام پست‌ها...")
+    print("\n🧪 اجرای ارسال تست هم‌زمان تمام پست‌ها همراه با پوستر...")
     send_price_to_live_channel() # تست پست ۶۰ قیمت
     time.sleep(2)
     job_post_2()                  # تست پست شاخص ترس و طمع
