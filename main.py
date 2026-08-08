@@ -243,7 +243,7 @@ def send_telegram_message(target_chat_id, message_text):
         pass
 
 # ==========================================
-# 📥 شنود پیام‌های ربات (پاسخ خوش‌آمدگویی + دریافت File ID عکس)
+# 📥 شنود پیام‌های ربات
 # ==========================================
 def telegram_listener():
     offset = 0
@@ -260,14 +260,12 @@ def telegram_listener():
                     text = message.get("text", "")
                     photo_list = message.get("photo", [])
                     
-                    # 📩 ۱. اگر کاربر عکسی بفرستد، ربات File ID آن را برمی‌گرداند
                     if chat_id and photo_list:
                         highest_quality_photo = photo_list[-1]
                         file_id = highest_quality_photo.get("file_id")
                         reply_msg = f"🖼 **File ID این تصویر استخراج شد:**\n\n`{file_id}`\n\n📌 این کد را کپی کنید و در متغیر پوستر مورد نظر قرار دهید."
                         send_telegram_message(chat_id, reply_msg)
 
-                    # 🤖 ۲. دستور /start (جایگزینی دقیق متن ارسالی کاربر)
                     elif chat_id and text == "/start":
                         welcome_msg = """💎 به مجموعه هوشمند ORAKLE MARKET خوش آمدید
 
@@ -474,8 +472,8 @@ def job_post_2():
     Current Index Value: {val} out of 100.
     
     CRITICAL FORMATTING INSTRUCTIONS:
-    1. You MUST copy every separator line EXACTLY: ─── ⋆ 💎 ⋆ ─── or ─── ⋆ 📌 ⋆ ─── or ─── ⋆ 💡 ⋆ ───
-    2. Keep empty line spaces between paragraphs clean and readable.
+    1. You MUST copy every separator line EXACTLY as short separators: ─── ⋆ 💎 ⋆ ─── or ─── ⋆ 📌 ⋆ ─── or ─── ⋆ 💡 ⋆ ───
+    2. DO NOT make separator lines long. Keep them compact and exactly as shown.
 
     Format:
     😱📊 **ORAKLE MARKET | تحلیل شاخص ترس و طمع**
@@ -518,8 +516,9 @@ def job_post_3():
     Write a high-level Macroeconomic & Geopolitical Analysis in Persian for global markets today.
     
     CRITICAL FORMATTING INSTRUCTIONS:
-    1. You MUST copy every separator line EXACTLY: ─── ⋆ 💎 ⋆ ─── or ─── ⋆ 🌐 ⋆ ─── or ─── ⋆ 📊 ⋆ ─── or ─── ⋆ 🎯 ⋆ ─── or ─── ⋆ 📌 ⋆ ───
-    2. Keep line spacing clean and professional.
+    1. You MUST use short separator lines ONLY. EXACT SIZE: ─── ⋆ 💎 ⋆ ─── or ─── ⋆ 🌐 ⋆ ─── or ─── ⋆ 📊 ⋆ ─── or ─── ⋆ 🎯 ⋆ ─── or ─── ⋆ 📌 ⋆ ───
+    2. NEVER extend or make the separator lines longer under any circumstances.
+    3. Keep line spacing clean and professional.
 
     Format:
     🔮 **ORAKLE MARKET | بولتن تحلیلی تخصصی**
