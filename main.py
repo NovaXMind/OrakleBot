@@ -267,26 +267,41 @@ def telegram_listener():
                         reply_msg = f"🖼 **File ID این تصویر استخراج شد:**\n\n`{file_id}`\n\n📌 این کد را کپی کنید و در متغیر پوستر مورد نظر قرار دهید."
                         send_telegram_message(chat_id, reply_msg)
 
-                    # 🤖 ۲. دستور /start
+                    # 🤖 ۲. دستور /start (با فاصله‌گذاری ۳ خطی)
                     elif chat_id and text == "/start":
                         welcome_msg = """💎 **به مجموعه هوشمند ORAKLE MARKET خوش آمدید**
 
+
+
 ─── ⋆ 💎 ⋆ ───
 
+
+
 به عنوان معامله‌گر و سرمایه‌گذار در بازارهای بین‌المللی، می‌توانید از خدمات تخصصی و مجزای مجموعه ما استفاده کنید:
+
+
 
 📊 **۱. کانال تحلیل‌های اختصاصی و ژئوپلیتیک:**
 جهت دسترسی به بولتن‌های تحلیلی کلان، بررسی‌های بنیادی، روان‌شناسی بازار و شاخص ترس و طمع:
 🏛✦  t.me/OrakleMarket  ✦🏛
 
+
+
 ⚡️ **۲. کانال زنده قیمت‌ها (Orakle Live):**
 جهت دریافت لحظه‌ای و ۳ ساعته نرخ ۶۰ دارایی برتر جهان (۳۰ ارز دیجیتال، کمودیتی و سهام):
 ⚡️✦  t.me/OrakleLive  ✦⚡️
 
+
+
 🌐 **پرتال رسمی مجموعه:**
 🌐✦  OrakleMarket.com  ✦🌐
 
+
+
 ─── ⋆ 💎 ⋆ ───
+
+
+
 ✨ **با ما یک گام از مارکت جلوتر باشید**"""
                         send_telegram_photo(chat_id, POSTER_WELCOME, welcome_msg)
         except Exception:
@@ -294,7 +309,7 @@ def telegram_listener():
         time.sleep(2)
 
 # ==========================================
-# 📮 ساخت متن داشبورد قیمت‌ها (اصلاح فاصله‌ها)
+# 📮 ساخت متن داشبورد قیمت‌ها (با فاصله‌گذاری ۳ خطی بالای سرتیترها)
 # ==========================================
 def generate_price_dashboard_text():
     date_header = get_formatted_dates()
@@ -304,6 +319,8 @@ def generate_price_dashboard_text():
 ─── ⋆ ⚡️ ⋆ ───
 
 {date_header}
+
+
 
 🏆 **۳۰ ارز دیجیتال برتر بازار:**
 ─── ⋆ 🏆 ⋆ ───
@@ -368,6 +385,8 @@ def generate_price_dashboard_text():
 
 • 💵 **تتر (USDT):** `{p.get('USDT')}`
 
+
+
 💰 **۱۵ کمودیتی و دارایی کلیدی:**
 ─── ⋆ 💰 ⋆ ───
 
@@ -400,6 +419,8 @@ def generate_price_dashboard_text():
 • 🍬 **شکر (Sugar):** `{p.get('SUGAR')}`
 
 • 🧵 **پنبه (Cotton):** `{p.get('COTTON')}`
+
+
 
 🏢 **۱۵ شاخص بورس و سهام معتبر جهان:**
 ─── ⋆ 🏢 ⋆ ───
